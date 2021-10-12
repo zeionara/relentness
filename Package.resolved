@@ -1,0 +1,43 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "swift-argument-parser",
+        "repositoryURL": "https://github.com/apple/swift-argument-parser",
+        "state": {
+          "branch": null,
+          "revision": "d2930e8fcf9c33162b9fcc1d522bc975e2d4179b",
+          "version": "1.0.1"
+        }
+      },
+      {
+        "package": "swift-log",
+        "repositoryURL": "https://github.com/apple/swift-log.git",
+        "state": {
+          "branch": null,
+          "revision": "5d66f7ba25daf4f94100e7022febf3c75e37a6c7",
+          "version": "1.4.2"
+        }
+      },
+      {
+        "package": "PcgRandom",
+        "repositoryURL": "https://github.com/paiv/swift-pcg-random.git",
+        "state": {
+          "branch": null,
+          "revision": "9008021a68686c1ce913eb273e016c2db184f3dd",
+          "version": "1.2.1"
+        }
+      },
+      {
+        "package": "wickedData",
+        "repositoryURL": "https://github.com/zeionara/wicked-data",
+        "state": {
+          "branch": "master",
+          "revision": "dbe814b4967c4ea166f7a7c6c64c5037bbc864a6",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}
