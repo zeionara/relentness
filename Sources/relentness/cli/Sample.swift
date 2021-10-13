@@ -57,9 +57,9 @@ public struct Sample: ParsableCommand {
                 writeLines("\(currentDirPath)/relation2id.txt", subset.id2relationship.asOpenKEReversedIdMapping, logger: logger)
                 writeLines("\(currentDirPath)/entity2id.txt", subset.id2entity.asOpenKEReversedIdMapping, logger: logger)
                 // logger.info("\(subset.train.asOpenKETriples)")
-                writeLines("\(currentDirPath)/train.txt", subset.train.asOpenKETriples, logger: logger)
-                writeLines("\(currentDirPath)/test.txt", subset.test.asOpenKETriples, logger: logger)
-                writeLines("\(currentDirPath)/valid.txt", subset.validation.asOpenKETriples, logger: logger)
+                writeLines("\(currentDirPath)/train2id.txt", subset.train.asOpenKETriples, logger: logger)
+                writeLines("\(currentDirPath)/test2id.txt", subset.test.asOpenKETriples, logger: logger)
+                writeLines("\(currentDirPath)/valid2id.txt", subset.validation.asOpenKETriples, logger: logger)
             }
         }
         // print(String(format: "%04i", 12))

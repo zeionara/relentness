@@ -1,0 +1,7 @@
+[FORMAT]
+max-line-length=200
+disable:
+    C0114,
+    C0115,
+    C0116
+
