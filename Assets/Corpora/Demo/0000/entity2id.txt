@@ -1,13 +1,13 @@
 12
+http://www.wikidata.org/entity/Q6786	5
 http://www.wikidata.org/entity/Q11905758	4
-http://www.wikidata.org/entity/Q28736576	8
 http://www.wikidata.org/entity/Q28855250	7
 http://www.wikidata.org/entity/Q60063013	10
-http://www.wikidata.org/entity/Q28729554	1
-http://www.wikidata.org/entity/Q11905736	3
-http://www.wikidata.org/entity/Q28736567	0
-http://www.wikidata.org/entity/Q102296	2
-http://www.wikidata.org/entity/Q6786	5
-http://www.wikidata.org/entity/Q102165	6
+http://www.wikidata.org/entity/Q28736576	8
 http://www.wikidata.org/entity/Q60062950	11
+http://www.wikidata.org/entity/Q11905736	3
+http://www.wikidata.org/entity/Q102165	6
+http://www.wikidata.org/entity/Q28736567	0
 http://www.wikidata.org/entity/Q28728519	9
+http://www.wikidata.org/entity/Q102296	2
+http://www.wikidata.org/entity/Q28729554	1

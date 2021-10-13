@@ -11,8 +11,8 @@ def main():
 
 
 def input_to_output_path(input_path: str):
-    input_path_components = input_path[::-1].split("/", maxsplit=3)
-    return f'{input_path_components[3][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/TransE'
+    input_path_components = input_path[::-1].split("/", maxsplit=4)
+    return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/TransE'
 
 
 @main.command()
@@ -36,6 +36,7 @@ def test_transe(path: str, output: str = None):
     config.set_opt_method("SGD")
 
     output_path = input_to_output_path(path) if output is None else output
+    # print(output_path)
     makedirs(output_path, exist_ok=True)
     config.set_export_files(f"{output_path}/model.vec.tf", 0)
     config.set_out_files(f"{output_path}/embedding.vec.json")
