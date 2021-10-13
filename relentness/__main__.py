@@ -23,9 +23,10 @@ def test_transe(path: str, output: str = None):
 
     config = Config()
 
+    # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     config.set_in_path(path)
     config.set_work_threads(4)
-    config.set_train_times(10)
+    config.set_train_times(2)
     config.set_nbatches(100)
     config.set_alpha(0.001)
     config.set_margin(1.0)
