@@ -1,6 +1,7 @@
-from os import makedirs, environ
+from os import makedirs
 
 import click
+
 from openke.config import Config
 from openke.models import TransE, ComplEx
 
@@ -17,9 +18,10 @@ def input_to_output_path(input_path: str):
 
 @main.command()
 @click.argument('path', type=str)
-@click.option('--model', '-m', type = click.Choice(['transe', 'complex']), required = True)
-@click.option('--output', '-o', type = str, default = None)
-def test(path: str, model: str, output: str = None):
+@click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
+@click.option('--output', '-o', type=str, default=None)
+@click.option('--verbose', '-v', type=bool, is_flag=True)
+def test(path: str, model: str, output: str = None, verbose: bool = False):
     print(f'Got input path "{path}"')
 
     config = Config()
@@ -36,6 +38,7 @@ def test(path: str, model: str, output: str = None):
     config.set_ent_neg_rate(1)
     config.set_rel_neg_rate(0)
     config.set_opt_method("SGD")
+    config.set_log_on(verbose)
 
     output_path = input_to_output_path(path) if output is None else output
     # print(output_path)
@@ -52,7 +55,6 @@ def test(path: str, model: str, output: str = None):
 
     config.run()
 
-    config.predict_head_entity(1, 0, 0)
     config.test()
 
 
