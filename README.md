@@ -16,9 +16,11 @@ The generated files will be saved in the directory `Assets/Demo`. To list all av
 ./.build/debug/relentness sample --help
 ```
 
-To test a model on a given dataset:
+To test a model on a given dataset with transe model:
 
 ```
-python -m relentness test-transe ./Assets/Corpora/Demo/0000/
+python -m relentness test ./Assets/Corpora/Demo/0000 -m transe
 ```
+
+Aside from `transe` there is a `complex` model supported as well at the moment which requires a similar call.
 
