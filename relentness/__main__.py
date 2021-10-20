@@ -1,6 +1,7 @@
 from os import makedirs
 
 import click
+import tensorflow as tf
 
 from openke.config import Config
 from openke.models import TransE, ComplEx
@@ -20,9 +21,13 @@ def input_to_output_path(input_path: str):
 @click.argument('path', type=str)
 @click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
 @click.option('--output', '-o', type=str, default=None)
+@click.option('--seed', '-s', type=int, default=None)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
-def test(path: str, model: str, output: str = None, verbose: bool = False):
+def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None):
     print(f'Got input path "{path}"')
+
+    if seed is not None:
+        tf.random.set_seed(seed)
 
     config = Config()
 
@@ -51,11 +56,11 @@ def test(path: str, model: str, output: str = None, verbose: bool = False):
     config.init()
 
     # environ['CUDA_VISIBLE_DEVICES']='7'
-    config.set_model(TransE if model == 'transe' else ComplEx)
+    config.set_model(TransE if model == 'transe' else ComplEx, seed = seed)
 
     config.run()
 
-    config.test()
+    config.test(verbose = True)
 
 
 if __name__ == '__main__':
