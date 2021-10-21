@@ -2,6 +2,7 @@ from os import makedirs
 
 import click
 import tensorflow as tf
+from keras.models import Model
 
 from openke.config import Config
 from openke.models import TransE, ComplEx
@@ -17,6 +18,12 @@ def input_to_output_path(input_path: str):
     return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/TransE'
 
 
+class Foo(Model):
+    @tf.function
+    def compute_mean(self, x, y):
+        return x + y / 2.0
+
+
 @main.command()
 @click.argument('path', type=str)
 @click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
@@ -29,12 +36,15 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     if seed is not None:
         tf.random.set_seed(seed)
 
+    # mean = Foo().compute_mean(2.0, 5.0)
+    # print('foo')
+
     config = Config()
 
     # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     config.set_in_path(path)
     config.set_work_threads(8)
-    config.set_train_times(100)
+    config.set_train_times(500)
     config.set_nbatches(2)
     config.set_alpha(0.1)
     config.set_margin(1.0)
@@ -56,11 +66,11 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     config.init()
 
     # environ['CUDA_VISIBLE_DEVICES']='7'
-    config.set_model(TransE if model == 'transe' else ComplEx, seed = seed)
+    config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
     config.run()
 
-    config.test(verbose = True)
+    config.test(verbose=True)
 
 
 if __name__ == '__main__':
