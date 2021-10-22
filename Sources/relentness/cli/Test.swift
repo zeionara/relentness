@@ -49,8 +49,9 @@ public struct Test: ParsableCommand {
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
             }
-
-            print(output)
+            
+            let metrics = MeagerMetricSet(output)
+            print(metrics)
         }
         
 
