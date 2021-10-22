@@ -29,9 +29,11 @@ class Foo(Model):
 @click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
 @click.option('--output', '-o', type=str, default=None)
 @click.option('--seed', '-s', type=int, default=None)
+@click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
-def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None):
-    print(f'Got input path "{path}"')
+def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, tsv: bool = False):
+    if not tsv:
+        print(f'Got input path "{path}"')
 
     if seed is not None:
         tf.random.set_seed(seed)
@@ -44,7 +46,7 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     config.set_in_path(path)
     config.set_work_threads(8)
-    config.set_train_times(500)
+    config.set_train_times(10)
     config.set_nbatches(2)
     config.set_alpha(0.1)
     config.set_margin(1.0)
@@ -63,14 +65,14 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
 
     config.set_test_link_prediction(True)
 
-    config.init()
+    config.init(as_tsv=tsv, verbose=verbose)
 
     # environ['CUDA_VISIBLE_DEVICES']='7'
     config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
     config.run()
 
-    config.test(verbose=True)
+    config.test(verbose=verbose, as_tsv=tsv)
 
 
 if __name__ == '__main__':
