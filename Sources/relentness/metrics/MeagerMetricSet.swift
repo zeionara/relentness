@@ -169,9 +169,25 @@ public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
         self.subsets = subsets
     }
 
+    public init(_ subsets: [MeagerMetricSubset]) {
+        self.subsets = subsets
+        self.description = "No string representation because the metric set was generated as a result of averaging other metricsets"
+    }
+
     public var mean: MeagerMetricSubset {
         subsets.mean
     }
 }
 
-    
+public extension Array where Element == MeagerMetricSet {
+    var mean: MeagerMetricSet {
+        MeagerMetricSet(
+            (0..<self.count).map{ i in
+                self.map{ metricSet in
+                    metricSet.subsets[i]
+                }.mean
+            }
+        )
+    }
+}
+

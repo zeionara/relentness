@@ -4,6 +4,7 @@ public protocol Tester {
     associatedtype Metrics: MetricSet
 
     func runSingleTest(seed: Int?) async throws -> Metrics
+    func runSingleTest(seeds: [Int]?) async throws -> [Metrics]
 }
 
 public enum OpenKeModel: String {
@@ -20,11 +21,13 @@ public struct OpenKeTester: Tester {
     public let model: OpenKeModel
     public let env: String
     public let corpus: String
+    public let nWorkers: Int?
 
-    public init(model: OpenKeModel, env: String, corpus: String) {
+    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil) {
         self.model = model
         self.env = env
         self.corpus = corpus
+        self.nWorkers = nWorkers
     }
 
     public func runSingleTest(seed: Int? = nil) async throws -> Metrics {
@@ -46,6 +49,27 @@ public struct OpenKeTester: Tester {
         )
 
         return MeagerMetricSet(output)
+    }
+
+    public func runSingleTest(seeds: [Int]? = nil) async throws -> [Metrics] {
+        try await runSingleTest(seeds: seeds, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
+    }
+
+    public func runSingleTest(seeds: [Int]? = nil, cvSplitIndex: Int) async throws -> [Metrics] {
+        if let unwrappedSeeds = seeds {
+            // let results = seeds.map{ seed in
+            //     runSingleTest(
+            //         seed: seed
+            //     )
+            // }
+            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed in
+                try await runSingleTest(
+                   seed: seed,
+                   cvSplitIndex: cvSplitIndex
+                ) 
+            }
+        }     
+        return [Metrics]()
     }
 }
 

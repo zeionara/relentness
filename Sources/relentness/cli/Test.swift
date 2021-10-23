@@ -133,3 +133,61 @@ public struct Test: ParsableCommand {
         // logger.info("Writing results to '\(path)'")
     }
 }
+
+public struct TestWithSeeds: ParsableCommand {
+    @Argument(help: "Name of folder which keeps the dataset for testing")
+    var corpus: String
+
+    @Option(name: .shortAndLong, help: "Model name")
+    var model: Model = .transe
+
+    @Option(name: .shortAndLong, help: "Index of cvsplit to perform testing on")
+    var cvSplitIndex: Int = 0
+
+    @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
+    var env: String = "reltf"
+
+    @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
+    var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
+
+    @Argument(help: "Seeds to use during testing")
+    var seeds: [Int] = [17, 2000]
+
+    public static var configuration = CommandConfiguration(
+        commandName: "test-with-seeds",
+        abstract: "Test a model using multiple seeds, then average results"
+    )
+
+    public init() {}
+
+    mutating public func run() {
+        var logger = Logger(label: "main")
+        logger.logLevel = .info
+
+        let env_ = env
+        let corpus_ = corpus
+        let model_ = model
+        let cvSplitIndex_ = cvSplitIndex
+        let nWorkers_ = nWorkers
+        let seeds_ = seeds
+
+        BlockingTask {
+            do { 
+                let metrics = try await OpenKeTester(
+                    model: model_.asOpenKeModel,
+                    env: env_,
+                    corpus: corpus_,
+                    nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                ).runSingleTest(
+                    seeds: seeds_,
+                    cvSplitIndex: cvSplitIndex_
+                )
+
+                print(metrics.map{$0.mean.mean})
+                print(metrics.mean.mean.mean)
+            } catch {
+                print("Unexpected error \(error), cannot complete testing")
+            }
+        }
+    }
+}
