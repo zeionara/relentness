@@ -1,17 +1,3 @@
-public extension String {
-    var rows: [String] {
-        self.components(separatedBy: "\n")
-    }
-
-    var tabSeparatedValues: [String] {
-        self.components(separatedBy: "\t")
-    }
-
-    var asDouble: Double {
-        Double(self)!
-    }
-}
-
 public protocol MetricSet {
     init(_ serialized: String)
 }
@@ -41,6 +27,14 @@ public struct MeagerMetricSeries {
     public let hitsAtThree: Double
     public let hitsAtTen: Double
 
+    fileprivate init(meanRank: Double, meanReciprocalRank: Double, hitsAtOne: Double, hitsAtThree: Double, hitsAtTen: Double) {
+        self.meanRank = meanRank
+        self.meanReciprocalRank = meanReciprocalRank
+        self.hitsAtOne = hitsAtOne
+        self.hitsAtThree = hitsAtThree
+        self.hitsAtTen = hitsAtTen
+    }
+
     fileprivate init(_ values: [String], indexMap: MeagerMetricSeriesIndexMap) {
         meanRank = values[indexMap.meanRank].asDouble
         meanReciprocalRank = values[indexMap.meanReciprocalRank].asDouble
@@ -50,10 +44,51 @@ public struct MeagerMetricSeries {
     }
 }
 
+public extension MeagerMetricSeries {
+    static func +(lhs: MeagerMetricSeries, rhs: MeagerMetricSeries) -> MeagerMetricSeries {
+        MeagerMetricSeries(
+            meanRank: lhs.meanRank + rhs.meanRank,
+            meanReciprocalRank: lhs.meanReciprocalRank + rhs.meanReciprocalRank,
+            hitsAtOne: lhs.hitsAtOne + rhs.hitsAtOne,
+            hitsAtThree: lhs.hitsAtThree + rhs.hitsAtThree,
+            hitsAtTen: lhs.hitsAtTen + rhs.hitsAtTen
+        )
+    }
+
+    static func /(lhs: MeagerMetricSeries, rhs: Int) -> MeagerMetricSeries {
+        lhs / Double(rhs)
+        // let rhsAsDouble = Double(rhs)
+
+        // return MeagerMetricSeries(
+        //     meanRank: lhs.meanRank / rhsAsDouble,
+        //     meanReciprocalRank: lhs.meanReciprocalRank / rhsAsDouble,
+        //     hitsAtOne: lhs.hitsAtOne / rhsAsDouble,
+        //     hitsAtThree: lhs.hitsAtThree / rhsAsDouble,
+        //     hitsAtTen: lhs.hitsAtTen / rhsAsDouble
+        // )
+    }
+
+    static func /(lhs: MeagerMetricSeries, rhs: Double) -> MeagerMetricSeries {
+        return MeagerMetricSeries(
+            meanRank: lhs.meanRank / rhs,
+            meanReciprocalRank: lhs.meanReciprocalRank / rhs,
+            hitsAtOne: lhs.hitsAtOne / rhs,
+            hitsAtThree: lhs.hitsAtThree / rhs,
+            hitsAtTen: lhs.hitsAtTen / rhs
+        )
+    }
+}
+
 public struct MeagerMetricSubset {
     public let head: MeagerMetricSeries
     public let tail: MeagerMetricSeries
     public let mean: MeagerMetricSeries
+
+    fileprivate init(head: MeagerMetricSeries, tail: MeagerMetricSeries, mean: MeagerMetricSeries) {
+        self.head = head
+        self.tail = tail
+        self.mean = mean
+    }
 
     fileprivate init(_ values: [[String]], indexMap: MeagerMetricSeriesIndexMap) {
         head = MeagerMetricSeries(values[0], indexMap: indexMap)
@@ -62,7 +97,46 @@ public struct MeagerMetricSubset {
     }
 }
 
+public extension MeagerMetricSubset {
+    static func +(lhs: MeagerMetricSubset, rhs: MeagerMetricSubset) -> MeagerMetricSubset {
+        MeagerMetricSubset(
+            head: lhs.head + rhs.head,
+            tail: lhs.tail + rhs.tail,
+            mean: lhs.mean + rhs.mean
+        )
+    }
+
+    static func /(lhs: MeagerMetricSubset, rhs: Int) -> MeagerMetricSubset {
+        lhs / Double(rhs)
+        // let rhsAsDouble = Double(rhs)
+
+        // return MeagerMetricSubset(
+        //     head: lhs.head / rhsAsDouble,
+        //     tail: lhs.tail / rhsAsDouble,
+        //     mean: lhs.mean / rhsAsDouble
+        // )
+    }
+
+    static func /(lhs: MeagerMetricSubset, rhs: Double) -> MeagerMetricSubset {
+        return MeagerMetricSubset(
+            head: lhs.head / rhs,
+            tail: lhs.tail / rhs,
+            mean: lhs.mean / rhs
+        )
+    }
+}
+
+
 private let nLinesPerBlock = 7
+
+public extension Array where Element == MeagerMetricSubset {
+    var mean: Element {
+        self[1..<self.count].reduce(
+            self.first!,
+            +
+        ) / self.count
+    }
+}
 
 public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
     public let subsets: [MeagerMetricSubset]
@@ -94,5 +168,10 @@ public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
 
         self.subsets = subsets
     }
+
+    public var mean: MeagerMetricSubset {
+        subsets.mean
+    }
 }
+
     

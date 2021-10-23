@@ -5,17 +5,29 @@ import wickedData
 
 enum Model: String, CaseIterable, ExpressibleByArgument {
     case transe, complex
+
+    public var asOpenKeModel: OpenKeModel {
+        switch self {
+            case .transe:
+                return .transe
+            case .complex:
+                return .complex
+        }
+    }        
 }
 
 public struct Test: ParsableCommand {
     @Option(name: .shortAndLong, help: "Identifier which allows to obtain reproducible results")
     var seed = 17
 
-    @Argument(help: "Path to folder which keeps the dataset for testing")
-    var path: String
+    @Argument(help: "Name of folder which keeps the dataset for testing")
+    var corpus: String
 
     @Option(name: .shortAndLong, help: "Model name")
     var model: Model = .transe
+
+    @Option(name: .shortAndLong, help: "Index of cvsplit to perform testing on")
+    var cvSplitIndex: Int = 0
 
     @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
     var env: String = "reltf"
@@ -33,25 +45,36 @@ public struct Test: ParsableCommand {
         logger.logLevel = .info
 
         let env_ = env
-        let path_ = path
+        let corpus_ = corpus
         let seed_ = seed
         let model_ = model
+        let cvSplitIndex_ = cvSplitIndex
 
         BlockingTask {
-            var output: String = ""
+            // var output: String = ""
 
             do { 
-                output = try await runSubprocessAndGetOutput(
-                    path: "/home/zeio/anaconda3/envs/\(env_)/bin/python",
-                    args: ["-m", "relentness", "test", "./Assets/Corpora/\(path_)/", "-s", "\(seed_)", "-m", model_.rawValue, "-t"],
-                    env: ["TF_CPP_MIN_LOG_LEVEL": "3"]
+                let metrics = try await OpenKeTester(
+                    model: model_.asOpenKeModel,
+                    env: env_,
+                    corpus: corpus_
+                ).runSingleTest(
+                    seed: seed_,
+                    cvSplitIndex: cvSplitIndex_
                 )
+
+                print(metrics.mean.mean)
+                // output = try await runSubprocessAndGetOutput(
+                //     path: "/home/zeio/anaconda3/envs/\(env_)/bin/python",
+                //     args: ["-m", "relentness", "test", "./Assets/Corpora/\(path_)/", "-s", "\(seed_)", "-m", model_.rawValue, "-t"],
+                //     env: ["TF_CPP_MIN_LOG_LEVEL": "3"]
+                // )
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
             }
             
-            let metrics = MeagerMetricSet(output)
-            print(metrics)
+            // let metrics = MeagerMetricSet(output)
+            // print(metrics.mean.mean)
         }
         
 
