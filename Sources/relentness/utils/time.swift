@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 
 public func measureExecutionTime<IntermediateResultType, FinalResultType>(
     _ function: () async throws -> IntermediateResultType,
@@ -10,5 +11,17 @@ public func measureExecutionTime<IntermediateResultType, FinalResultType>(
     let nSeconds = Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000_000
 
     return handleExecutionTimeMeasurement(result, nSeconds)
+}
+
+public func traceExecutionTime<Type> (
+    _ logger: Logger,
+    _ function: () async throws -> Type
+) async throws -> Type {
+    try await measureExecutionTime(function) { output, nSeconds in
+        logger.info(
+            "Execution time is \(String(format: "%.3f", nSeconds)) seconds"
+        )
+        return output
+    }
 }
 

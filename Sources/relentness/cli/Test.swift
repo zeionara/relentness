@@ -54,14 +54,16 @@ public struct Test: ParsableCommand {
             // var output: String = ""
 
             do { 
-                let metrics = try await OpenKeTester(
-                    model: model_.asOpenKeModel,
-                    env: env_,
-                    corpus: corpus_
-                ).runSingleTest(
-                    seed: seed_,
-                    cvSplitIndex: cvSplitIndex_
-                )
+                let metrics = try await traceExecutionTime(logger) {
+                    try await OpenKeTester(
+                        model: model_.asOpenKeModel,
+                        env: env_,
+                        corpus: corpus_
+                    ).runSingleTest(
+                        seed: seed_,
+                        cvSplitIndex: cvSplitIndex_
+                    )
+                }
 
                 print(MeagerMetricSeries.header)
                 print(metrics.mean.mean)
@@ -174,17 +176,20 @@ public struct TestWithSeeds: ParsableCommand {
 
         BlockingTask {
             do { 
-                let metrics = try await OpenKeTester(
-                    model: model_.asOpenKeModel,
-                    env: env_,
-                    corpus: corpus_,
-                    nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
-                ).runSingleTest(
-                    seeds: seeds_.count > 0 ? seeds_ : nil,
-                    cvSplitIndex: cvSplitIndex_
-                )
+                let metrics = try await traceExecutionTime(logger) {
+                    try await OpenKeTester(
+                        model: model_.asOpenKeModel,
+                        env: env_,
+                        corpus: corpus_,
+                        nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                    ).runSingleTest(
+                        seeds: seeds_.count > 0 ? seeds_ : nil,
+                        cvSplitIndex: cvSplitIndex_
+                    )
+                }
 
-                print(metrics.map{$0.mean.mean})
+                // print(metrics.map{$0.mean.mean})
+                print(MeagerMetricSeries.header)
                 print(metrics.mean.mean.mean) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
@@ -228,14 +233,17 @@ public struct TestAllFolds: ParsableCommand {
 
         BlockingTask {
             do {
-                let metrics = try await OpenKeTester(
-                    model: model_.asOpenKeModel,
-                    env: env_,
-                    corpus: corpus_,
-                    nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
-                ).run(
-                    seeds: seeds_.count > 0 ? seeds_ : nil
-                )
+                let metrics = try await traceExecutionTime(logger) {
+                    try await OpenKeTester(
+                        model: model_.asOpenKeModel,
+                        env: env_,
+                        corpus: corpus_,
+                        nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                    ).run(
+                        seeds: seeds_.count > 0 ? seeds_ : nil
+                    )
+                }
+
                 print(MeagerMetricSeries.header)
                 print(mean(sets: metrics).mean.mean.mean) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
                 print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")

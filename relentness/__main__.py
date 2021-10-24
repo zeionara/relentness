@@ -1,8 +1,10 @@
 from os import makedirs
 
 import click
+from uuid import uuid4
 import tensorflow as tf
 from keras.models import Model
+from shutil import rmtree
 
 from openke.config import Config
 from openke.models import TransE, ComplEx
@@ -13,9 +15,9 @@ def main():
     pass
 
 
-def input_to_output_path(input_path: str):
+def input_to_output_path(input_path: str, model: str, seed: int = None):
     input_path_components = input_path[::-1].split("/", maxsplit=4)
-    return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/TransE'
+    return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
 
 
 class Foo(Model):
@@ -31,7 +33,8 @@ class Foo(Model):
 @click.option('--seed', '-s', type=int, default=None)
 @click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
-def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, tsv: bool = False):
+@click.option('--remove', '-r', type=bool, is_flag=True)
+def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, tsv: bool = False, remove: bool = False):
     if not tsv:
         print(f'Got input path "{path}"')
 
@@ -57,7 +60,7 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     config.set_opt_method("SGD")
     config.set_log_on(verbose)
 
-    output_path = input_to_output_path(path) if output is None else output
+    output_path = input_to_output_path(path, model, seed) if output is None else output
     # print(output_path)
     makedirs(output_path, exist_ok=True)
     config.set_export_files(f"{output_path}/model.vec.tf", 0)
@@ -70,9 +73,13 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     # environ['CUDA_VISIBLE_DEVICES']='7'
     config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
-    config.run()
+    try:
+        config.run()
 
-    config.test(verbose=verbose, as_tsv=tsv)
+        config.test(verbose=verbose, as_tsv=tsv)
+    finally:
+        if remove:
+            rmtree(output_path)
 
 
 if __name__ == '__main__':
