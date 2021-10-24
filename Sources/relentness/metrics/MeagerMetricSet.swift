@@ -1,5 +1,5 @@
 public protocol MetricSet {
-    init(_ serialized: String)
+    init(_ serialized: String, time: Double?)
 }
 
 private struct MeagerMetricSeriesIndexMap {
@@ -23,36 +23,74 @@ private struct MeagerMetricSeriesIndexMap {
 let N_DECIMAL_PLACES = 3
 let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
 
+infix operator +++: AdditionPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
+infix operator /++: MultiplicationPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
+
 public struct MeagerMetricSeries: CustomStringConvertible {
     public let meanRank: Double
     public let meanReciprocalRank: Double
     public let hitsAtOne: Double
     public let hitsAtThree: Double
     public let hitsAtTen: Double
+    public let time: Double?
+    public let totalTime: Double?
 
-    fileprivate init(meanRank: Double, meanReciprocalRank: Double, hitsAtOne: Double, hitsAtThree: Double, hitsAtTen: Double) {
+    fileprivate init(meanRank: Double, meanReciprocalRank: Double, hitsAtOne: Double, hitsAtThree: Double, hitsAtTen: Double, time: Double? = nil, totalTime: Double? = nil) {
         self.meanRank = meanRank
         self.meanReciprocalRank = meanReciprocalRank
         self.hitsAtOne = hitsAtOne
         self.hitsAtThree = hitsAtThree
         self.hitsAtTen = hitsAtTen
+        self.time = time
+        self.totalTime = totalTime
     }
 
-    fileprivate init(_ values: [String], indexMap: MeagerMetricSeriesIndexMap) {
+    fileprivate init(_ values: [String], indexMap: MeagerMetricSeriesIndexMap, time: Double? = nil) {
         meanRank = values[indexMap.meanRank].asDouble
         meanReciprocalRank = values[indexMap.meanReciprocalRank].asDouble
         hitsAtOne = values[indexMap.hitsAtOne].asDouble
         hitsAtThree = values[indexMap.hitsAtThree].asDouble
         hitsAtTen = values[indexMap.hitsAtTen].asDouble
+        self.time = time
+        self.totalTime = nil
     }
 
     public var description: String {
         "\(String(format: FLOAT_FORMAT, meanRank))\t\(String(format: FLOAT_FORMAT, meanReciprocalRank))\t" +
-        "\(String(format: FLOAT_FORMAT, hitsAtOne))\t\(String(format: FLOAT_FORMAT, hitsAtThree))\t\(String(format: FLOAT_FORMAT, hitsAtTen))"        
+        "\(String(format: FLOAT_FORMAT, hitsAtOne))\t\(String(format: FLOAT_FORMAT, hitsAtThree))\t\(String(format: FLOAT_FORMAT, hitsAtTen))\t" +
+        "\(stringifiedTime)\t\(stringifiedTotalTime)"
+    }
+
+    public var stringifiedTime: String {
+       if let unwrappedTime = time {
+          return String(format: FLOAT_FORMAT, unwrappedTime) 
+        }
+        return "-"
+    }
+
+    public var unwrappedTime: Double {
+        if let unwrappedTime_ = time {
+            return unwrappedTime_
+        }
+        return 0
+    }
+
+    public var stringifiedTotalTime: String {
+       if let unwrappedTime = totalTime {
+          return String(format: FLOAT_FORMAT, unwrappedTime) 
+        }
+        return stringifiedTime
+    }
+
+    public var unwrappedTotalTime: Double {
+        if let unwrappedTime_ = totalTime {
+            return unwrappedTime_
+        }
+        return unwrappedTime
     }
 
     public static var header: String {
-        "mr\tmrr\thits@1\thits@3\thits@10"
+        "mr\tmrr\thits@1\thits@3\thits@10\ttime\ttotal-time"
     }
 }
 
@@ -63,7 +101,21 @@ public extension MeagerMetricSeries {
             meanReciprocalRank: lhs.meanReciprocalRank + rhs.meanReciprocalRank,
             hitsAtOne: lhs.hitsAtOne + rhs.hitsAtOne,
             hitsAtThree: lhs.hitsAtThree + rhs.hitsAtThree,
-            hitsAtTen: lhs.hitsAtTen + rhs.hitsAtTen
+            hitsAtTen: lhs.hitsAtTen + rhs.hitsAtTen,
+            time: lhs.time,
+            totalTime: lhs.totalTime
+        )
+    }
+
+    static func +++(lhs: MeagerMetricSeries, rhs: MeagerMetricSeries) -> MeagerMetricSeries {
+        MeagerMetricSeries(
+            meanRank: lhs.meanRank + rhs.meanRank,
+            meanReciprocalRank: lhs.meanReciprocalRank + rhs.meanReciprocalRank,
+            hitsAtOne: lhs.hitsAtOne + rhs.hitsAtOne,
+            hitsAtThree: lhs.hitsAtThree + rhs.hitsAtThree,
+            hitsAtTen: lhs.hitsAtTen + rhs.hitsAtTen,
+            time: lhs.unwrappedTime + rhs.unwrappedTime,
+            totalTime: lhs.unwrappedTotalTime + rhs.unwrappedTotalTime
         )
     }
 
@@ -86,7 +138,25 @@ public extension MeagerMetricSeries {
             meanReciprocalRank: lhs.meanReciprocalRank / rhs,
             hitsAtOne: lhs.hitsAtOne / rhs,
             hitsAtThree: lhs.hitsAtThree / rhs,
-            hitsAtTen: lhs.hitsAtTen / rhs
+            hitsAtTen: lhs.hitsAtTen / rhs,
+            time: lhs.time,
+            totalTime: lhs.totalTime
+        )
+    }
+
+    static func /++(lhs: MeagerMetricSeries, rhs: Int) -> MeagerMetricSeries {
+        lhs /++ Double(rhs)
+    }
+
+    static func /++(lhs: MeagerMetricSeries, rhs: Double) -> MeagerMetricSeries {
+        return MeagerMetricSeries(
+            meanRank: lhs.meanRank / rhs,
+            meanReciprocalRank: lhs.meanReciprocalRank / rhs,
+            hitsAtOne: lhs.hitsAtOne / rhs,
+            hitsAtThree: lhs.hitsAtThree / rhs,
+            hitsAtTen: lhs.hitsAtTen / rhs,
+            time: lhs.unwrappedTime / rhs,
+            totalTime: lhs.totalTime
         )
     }
 }
@@ -102,10 +172,10 @@ public struct MeagerMetricSubset {
         self.mean = mean
     }
 
-    fileprivate init(_ values: [[String]], indexMap: MeagerMetricSeriesIndexMap) {
-        head = MeagerMetricSeries(values[0], indexMap: indexMap)
-        tail = MeagerMetricSeries(values[1], indexMap: indexMap)
-        mean = MeagerMetricSeries(values[2], indexMap: indexMap)
+    fileprivate init(_ values: [[String]], indexMap: MeagerMetricSeriesIndexMap, time: Double? = nil) {
+        head = MeagerMetricSeries(values[0], indexMap: indexMap, time: time)
+        tail = MeagerMetricSeries(values[1], indexMap: indexMap, time: time)
+        mean = MeagerMetricSeries(values[2], indexMap: indexMap, time: time)
     }
 }
 
@@ -115,6 +185,14 @@ public extension MeagerMetricSubset {
             head: lhs.head + rhs.head,
             tail: lhs.tail + rhs.tail,
             mean: lhs.mean + rhs.mean
+        )
+    }
+
+    static func +++(lhs: MeagerMetricSubset, rhs: MeagerMetricSubset) -> MeagerMetricSubset {
+        MeagerMetricSubset(
+            head: lhs.head +++ rhs.head,
+            tail: lhs.tail +++ rhs.tail,
+            mean: lhs.mean +++ rhs.mean
         )
     }
 
@@ -128,12 +206,24 @@ public extension MeagerMetricSubset {
         //     mean: lhs.mean / rhsAsDouble
         // )
     }
-
+    
     static func /(lhs: MeagerMetricSubset, rhs: Double) -> MeagerMetricSubset {
         return MeagerMetricSubset(
             head: lhs.head / rhs,
             tail: lhs.tail / rhs,
             mean: lhs.mean / rhs
+        )
+    }
+
+    static func /++(lhs: MeagerMetricSubset, rhs: Int) -> MeagerMetricSubset {
+        lhs /++ Double(rhs)
+    }
+
+    static func /++(lhs: MeagerMetricSubset, rhs: Double) -> MeagerMetricSubset {
+        return MeagerMetricSubset(
+            head: lhs.head /++ rhs,
+            tail: lhs.tail /++ rhs,
+            mean: lhs.mean /++ rhs
         )
     }
 }
@@ -148,13 +238,20 @@ public extension Array where Element == MeagerMetricSubset {
             +
         ) / self.count
     }
+
+    var meanWithAccumulatingTime: Element {
+        self[1..<self.count].reduce(
+            self.first!,
+            +++
+        ) /++ self.count
+    }
 }
 
 public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
     public let subsets: [MeagerMetricSubset]
     public let description: String
 
-    public init(_ serialized: String) {
+    public init(_ serialized: String, time: Double? = nil) {
         description = serialized
 
         let rows = serialized.rows
@@ -168,11 +265,13 @@ public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
                 contentsOf: [
                     MeagerMetricSubset(
                         rows[(i * nLinesPerBlock + 1)..<(i * nLinesPerBlock + 4)].map{$0.tabSeparatedValues},
-                        indexMap: indexMap
+                        indexMap: indexMap,
+                        time: time
                     ),
                     MeagerMetricSubset(
                         rows[(i * nLinesPerBlock + 4)..<(i * nLinesPerBlock + 7)].map{$0.tabSeparatedValues},
-                        indexMap: indexMap
+                        indexMap: indexMap,
+                        time: time
                     )
                 ]
             )
@@ -197,7 +296,7 @@ public extension Array where Element == MeagerMetricSet {
             (0..<self.count).map{ i in
                 self.map{ metricSet in
                     metricSet.subsets[i]
-                }.mean
+                }.meanWithAccumulatingTime
             }
         )
     }

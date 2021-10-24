@@ -43,13 +43,20 @@ public struct OpenKeTester: Tester {
             )
         }
 
-        let output = try await runSubprocessAndGetOutput(
-            path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
-            args: args,
-            env: ["TF_CPP_MIN_LOG_LEVEL": "3"]
-        )
-
-        return MeagerMetricSet(output)
+        // let output = 
+        return try await measureExecutionTime {
+            try await runSubprocessAndGetOutput(
+                path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
+                args: args,
+                env: ["TF_CPP_MIN_LOG_LEVEL": "3"]
+            )
+        } handleExecutionTimeMeasurement: { output, nSeconds in
+            MeagerMetricSet(
+                output,
+                time: nSeconds
+            )
+        }
+        // return MeagerMetricSet(output)
     }
 
     public func runSingleTest(seeds: [Int]? = nil) async throws -> [Metrics] {
@@ -63,7 +70,7 @@ public struct OpenKeTester: Tester {
             //         seed: seed
             //     )
             // }
-            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed in
+            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
                 try await runSingleTest(
                    seed: seed,
                    cvSplitIndex: cvSplitIndex
