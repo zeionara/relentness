@@ -24,31 +24,61 @@ public struct OpenKeTester: Tester {
     public let corpus: String
     public let nWorkers: Int?
 
-    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil) {
+    public let remove: Bool
+    public let gpu: Bool
+    public let differentGpus: Bool
+
+    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil, remove: Bool = false, gpu: Bool = true, differentGpus: Bool = true) {
         self.model = model
         self.env = env
         self.corpus = corpus
         self.nWorkers = nWorkers
+
+        self.remove = remove
+        self.gpu = gpu
+        self.differentGpus = differentGpus
     }
 
     public func runSingleTest(seed: Int? = nil) async throws -> Metrics {
         try await runSingleTest(seed: seed, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int) async throws -> Metrics {
+    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil) async throws -> Metrics {
+        // Configure args
+        // print("Worker index = \(workerIndex)")
+
         var args = ["-m", "relentness", "test", "\(corpusPath)/\(String(format: "%04i", cvSplitIndex))/", "-m", model.rawValue, "-t"]
         if let unwrappedSeed = seed {
             args.append(
                 contentsOf: ["-s", String(describing: unwrappedSeed)]
             )
+        } else {
+            args.append("-r")
         }
+
+        if (remove && !args.contains("-r")) {
+            args.append("-r")
+        }
+
+        // Configure env
+
+        var envVars = ["TF_CPP_MIN_LOG_LEVEL": "3"]
+
+        if !gpu {
+            envVars["CUDA_VISIBLE_DEVICES"] = "-1"
+        } else if let unwrappedWorkerIndex = workerIndex, differentGpus {
+            envVars["CUDA_VISIBLE_DEVICES"] = String(describing: unwrappedWorkerIndex)
+        }
+
+        // print(envVars)
 
         // let output = 
         return try await measureExecutionTime {
+            // print("/home/\(USER)/anaconda3/envs/\(env)/bin/python")
             try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
                 args: args,
-                env: ["TF_CPP_MIN_LOG_LEVEL": "3"]
+                env: envVars
             )
         } handleExecutionTimeMeasurement: { output, nSeconds in
             MeagerMetricSet(
@@ -70,10 +100,11 @@ public struct OpenKeTester: Tester {
             //         seed: seed
             //     )
             // }
-            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
+            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
                 try await runSingleTest(
                    seed: seed,
-                   cvSplitIndex: cvSplitIndex
+                   cvSplitIndex: cvSplitIndex,
+                   workerIndex: workerIndex
                 ) 
             }
         }
@@ -83,7 +114,7 @@ public struct OpenKeTester: Tester {
     }
 
     public func run(seeds: [Int]? = nil) async throws -> [[Metrics]] {
-        return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex in // No parallelism on this level
+        return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
             try await runSingleTest(
                seeds: seeds,
                cvSplitIndex: cvSplitStringifiedIndex.asInt

@@ -31,6 +31,15 @@ public struct Test: ParsableCommand {
 
     @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
     var env: String = "reltf"
+    
+    @Flag(name: .shortAndLong, help: "Delete trained model files")
+    var remove = false
+
+    @Flag(name: .shortAndLong, help: "Enable gpu")
+    var gpu = false
+
+    @Flag(name: .shortAndLong, help: "Run each worker on different gpu")
+    var differentGpus = false
 
     public static var configuration = CommandConfiguration(
         commandName: "test",
@@ -50,23 +59,30 @@ public struct Test: ParsableCommand {
         let model_ = model
         let cvSplitIndex_ = cvSplitIndex
 
+        let remove_ = remove
+        let gpu_ = gpu
+        let differentGpus_ = differentGpus
+
         BlockingTask {
             // var output: String = ""
 
             do { 
-                let metrics = try await traceExecutionTime(logger) {
+                let (metrics, executionTime) = try await traceExecutionTime(logger) {
                     try await OpenKeTester(
                         model: model_.asOpenKeModel,
                         env: env_,
-                        corpus: corpus_
+                        corpus: corpus_,
+                        remove: remove_,
+                        gpu: gpu_,
+                        differentGpus: differentGpus_
                     ).runSingleTest(
                         seed: seed_,
                         cvSplitIndex: cvSplitIndex_
                     )
                 }
 
-                print(MeagerMetricSeries.header)
-                print(metrics.mean.mean)
+                print(MeagerMetricSeries.headerWithExecutionTime)
+                print(metrics.mean.mean.descriptionWithExecutionTime(executionTime))
                 // output = try await runSubprocessAndGetOutput(
                 //     path: "/home/zeio/anaconda3/envs/\(env_)/bin/python",
                 //     args: ["-m", "relentness", "test", "./Assets/Corpora/\(path_)/", "-s", "\(seed_)", "-m", model_.rawValue, "-t"],
@@ -156,6 +172,15 @@ public struct TestWithSeeds: ParsableCommand {
     @Argument(help: "Seeds to use during testing")
     var seeds: [Int] = [Int]()
 
+    @Flag(name: .shortAndLong, help: "Delete trained model files")
+    var remove = false
+
+    @Flag(name: .shortAndLong, help: "Enable gpu")
+    var gpu = false
+
+    @Flag(name: .shortAndLong, help: "Run each worker on different gpu")
+    var differentGpus = false
+
     public static var configuration = CommandConfiguration(
         commandName: "test-with-seeds",
         abstract: "Test a model using multiple seeds, then average results"
@@ -174,14 +199,21 @@ public struct TestWithSeeds: ParsableCommand {
         let nWorkers_ = nWorkers
         let seeds_ = seeds
 
+        let remove_ = remove
+        let gpu_ = gpu
+        let differentGpus_ = differentGpus
+
         BlockingTask {
             do { 
-                let metrics = try await traceExecutionTime(logger) {
+                let (metrics, executionTime) = try await traceExecutionTime(logger) {
                     try await OpenKeTester(
                         model: model_.asOpenKeModel,
                         env: env_,
                         corpus: corpus_,
-                        nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                        remove: remove_,
+                        gpu: gpu_,
+                        differentGpus: differentGpus_
                     ).runSingleTest(
                         seeds: seeds_.count > 0 ? seeds_ : nil,
                         cvSplitIndex: cvSplitIndex_
@@ -189,8 +221,8 @@ public struct TestWithSeeds: ParsableCommand {
                 }
 
                 // print(metrics.map{$0.mean.mean})
-                print(MeagerMetricSeries.header)
-                print(metrics.mean.mean.mean) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
+                print(MeagerMetricSeries.headerWithExecutionTime)
+                print(metrics.mean.mean.mean.descriptionWithExecutionTime(executionTime)) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
             }
@@ -214,6 +246,15 @@ public struct TestAllFolds: ParsableCommand {
     @Argument(help: "Seeds to use during testing")
     var seeds: [Int] = [Int]() // [17, 2000]
 
+    @Flag(name: .shortAndLong, help: "Delete trained model files")
+    var remove = false
+
+    @Flag(name: .shortAndLong, help: "Enable gpu")
+    var gpu = false
+
+    @Flag(name: .shortAndLong, help: "Run each worker on different gpu")
+    var differentGpus = false
+
     public static var configuration = CommandConfiguration(
         commandName: "test-all-folds",
         abstract: "Test a model on all cv folds, then average results"
@@ -231,21 +272,28 @@ public struct TestAllFolds: ParsableCommand {
         let nWorkers_ = nWorkers
         let seeds_ = seeds
 
+        let remove_ = remove
+        let gpu_ = gpu
+        let differentGpus_ = differentGpus
+
         BlockingTask {
             do {
-                let metrics = try await traceExecutionTime(logger) {
+                let (metrics, executionTime) = try await traceExecutionTime(logger) {
                     try await OpenKeTester(
                         model: model_.asOpenKeModel,
                         env: env_,
                         corpus: corpus_,
-                        nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                        remove: remove_,
+                        gpu: gpu_,
+                        differentGpus: differentGpus_
                     ).run(
                         seeds: seeds_.count > 0 ? seeds_ : nil
                     )
                 }
 
-                print(MeagerMetricSeries.header)
-                print(mean(sets: metrics).mean.mean.mean) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+                print(MeagerMetricSeries.headerWithExecutionTime)
+                print(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime)) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
                 print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
                 // for metricsForCvSplit in metrics {
                 //     for metricsForSeed in metricsForCvSplit {

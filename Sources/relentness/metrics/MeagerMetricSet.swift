@@ -61,6 +61,10 @@ public struct MeagerMetricSeries: CustomStringConvertible {
         "\(stringifiedTime)\t\(stringifiedTotalTime)"
     }
 
+    public func descriptionWithExecutionTime(_ executionTime: Double) -> String {
+        "\(description)\t\(String(format: FLOAT_FORMAT, executionTime))"
+    }
+
     public var stringifiedTime: String {
        if let unwrappedTime = time {
           return String(format: FLOAT_FORMAT, unwrappedTime) 
@@ -91,6 +95,10 @@ public struct MeagerMetricSeries: CustomStringConvertible {
 
     public static var header: String {
         "mr\tmrr\thits@1\thits@3\thits@10\ttime\ttotal-time"
+    }
+
+    public static var headerWithExecutionTime: String {
+        "\(header)\texecution-time"
     }
 }
 

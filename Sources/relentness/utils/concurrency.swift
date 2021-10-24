@@ -4,7 +4,7 @@ extension Collection {
     //
     // Taken from https://gist.github.com/DougGregor/92a2e4f6e11f6d733fb5065e9d1c880f
     //
-    func asyncMap<T>(nWorkers requestedNWorkers: Int? = nil, _ transform: @escaping (Element) async throws -> T) async throws -> [T] {
+    func asyncMap<T>(nWorkers requestedNWorkers: Int? = nil, _ transform: @escaping (Element, Int) async throws -> T) async throws -> [T] {
         let nWorkers = requestedNWorkers ?? DEFAULT_N_WORKERS
 
         let n = self.count
@@ -13,19 +13,24 @@ extension Collection {
         }
 
         // return try await Task.withGroup(resultType: (Int, T).self) { group in
-        return try await withThrowingTaskGroup(of: (Int, T).self, returning: [T].self) { group in
+        return try await withThrowingTaskGroup(of: (Int, Int, T).self, returning: [T].self) { group in
             var result = Array<T?>(repeatElement(nil, count: n))
 
             var i = self.startIndex
             var submitted = 0
+            var freeWorkerIndices = Set(0..<nWorkers)
 
-            func submitNext() async throws {
+            func submitNext(_ workerIndex: Int? = nil) async throws {
                 if i == self.endIndex { return }
 
-                group.addTask { [submitted, i] in
-                    let value = try await transform(self[i])
-                    return (submitted, value)
+                let unwrappedWorkerIndex = workerIndex ?? submitted
+
+                group.addTask { [submitted, unwrappedWorkerIndex, i] in
+                    let value = try await transform(self[i], unwrappedWorkerIndex)
+                    return (submitted, unwrappedWorkerIndex, value)
                 }
+
+                freeWorkerIndices.remove(submitted)
                 submitted += 1
                 formIndex(after: &i)
             }
@@ -36,11 +41,11 @@ extension Collection {
             }
 
             // as each task completes, submit a new task until we run out of work
-            while let (index, taskResult) = try! await group.next() {
+            while let (index, workerIndex, taskResult) = try! await group.next() {
                 result[index] = taskResult
 
                 try Task.checkCancellation()
-                try await submitNext()
+                try await submitNext(workerIndex)
             }
 
             assert(result.count == n)
