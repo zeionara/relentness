@@ -18,7 +18,7 @@ enum Model: String, CaseIterable, ExpressibleByArgument {
 
 public struct Test: ParsableCommand {
     @Option(name: .shortAndLong, help: "Identifier which allows to obtain reproducible results")
-    var seed = 17
+    var seed: Int?
 
     @Argument(help: "Name of folder which keeps the dataset for testing")
     var corpus: String
@@ -63,6 +63,7 @@ public struct Test: ParsableCommand {
                     cvSplitIndex: cvSplitIndex_
                 )
 
+                print(MeagerMetricSeries.header)
                 print(metrics.mean.mean)
                 // output = try await runSubprocessAndGetOutput(
                 //     path: "/home/zeio/anaconda3/envs/\(env_)/bin/python",
@@ -151,7 +152,7 @@ public struct TestWithSeeds: ParsableCommand {
     var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
 
     @Argument(help: "Seeds to use during testing")
-    var seeds: [Int] = [17, 2000]
+    var seeds: [Int] = [Int]()
 
     public static var configuration = CommandConfiguration(
         commandName: "test-with-seeds",
@@ -179,12 +180,72 @@ public struct TestWithSeeds: ParsableCommand {
                     corpus: corpus_,
                     nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
                 ).runSingleTest(
-                    seeds: seeds_,
+                    seeds: seeds_.count > 0 ? seeds_ : nil,
                     cvSplitIndex: cvSplitIndex_
                 )
 
                 print(metrics.map{$0.mean.mean})
-                print(metrics.mean.mean.mean)
+                print(metrics.mean.mean.mean) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
+            } catch {
+                print("Unexpected error \(error), cannot complete testing")
+            }
+        }
+    }
+}
+
+public struct TestAllFolds: ParsableCommand {
+    @Argument(help: "Name of folder which keeps the dataset for testing")
+    var corpus: String
+
+    @Option(name: .shortAndLong, help: "Model name")
+    var model: Model = .transe
+
+    @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
+    var env: String = "reltf"
+
+    @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
+    var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
+
+    @Argument(help: "Seeds to use during testing")
+    var seeds: [Int] = [Int]() // [17, 2000]
+
+    public static var configuration = CommandConfiguration(
+        commandName: "test-all-folds",
+        abstract: "Test a model on all cv folds, then average results"
+    )
+
+    public init() {}
+
+    mutating public func run() {
+        var logger = Logger(label: "main")
+        logger.logLevel = .info
+
+        let env_ = env
+        let corpus_ = corpus
+        let model_ = model
+        let nWorkers_ = nWorkers
+        let seeds_ = seeds
+
+        BlockingTask {
+            do {
+                let metrics = try await OpenKeTester(
+                    model: model_.asOpenKeModel,
+                    env: env_,
+                    corpus: corpus_,
+                    nWorkers: nWorkers_ // > 0 ? nWorkers_ : nil
+                ).run(
+                    seeds: seeds_.count > 0 ? seeds_ : nil
+                )
+                print(MeagerMetricSeries.header)
+                print(mean(sets: metrics).mean.mean.mean) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+                print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
+                // for metricsForCvSplit in metrics {
+                //     for metricsForSeed in metricsForCvSplit {
+                //         print(metricsForSeed.mean.mean)
+                //     }
+                // }
+                // print(metrics.map{$0.mean.mean})
+                // print(metrics.mean.mean.mean) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
             }

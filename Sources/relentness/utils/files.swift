@@ -89,3 +89,21 @@ public func writeLines(_ path: String, _ lines: [String], logger: Logger? = nil)
     }
 }
 
+public func getNestedFolderNames(_ path: String) -> [String] { // TODO: Implement exception handling
+    let fileManager = FileManager.default
+    let contents = try! fileManager.contentsOfDirectory(
+        at: URL.local(path)!,
+        includingPropertiesForKeys: nil
+    )
+
+    var isDir: ObjCBool = false
+    return contents.filter { file in
+        fileManager.fileExists(atPath: file.path, isDirectory: &isDir) && isDir.boolValue
+    }.map{ file in
+        file.lastPathComponent
+    }.sorted()
+    // print(contents.first!.lastPathComponent)
+    // print(result.count)
+    // return result
+}
+

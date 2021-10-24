@@ -10,5 +10,9 @@ public extension String {
     var asDouble: Double {
         Double(self)!
     }
+
+    var asInt: Int {
+        Int(self)!
+    }
 }
 

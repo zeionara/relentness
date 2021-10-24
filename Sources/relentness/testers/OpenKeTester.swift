@@ -5,6 +5,7 @@ public protocol Tester {
 
     func runSingleTest(seed: Int?) async throws -> Metrics
     func runSingleTest(seeds: [Int]?) async throws -> [Metrics]
+    func run(seeds: [Int]?) async throws -> [[Metrics]]
 }
 
 public enum OpenKeModel: String {
@@ -35,7 +36,7 @@ public struct OpenKeTester: Tester {
     }
 
     public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int) async throws -> Metrics {
-        var args = ["-m", "relentness", "test", "./Assets/Corpora/\(corpus)/\(String(format: "%04i", cvSplitIndex))/", "-m", model.rawValue, "-t"]
+        var args = ["-m", "relentness", "test", "\(corpusPath)/\(String(format: "%04i", cvSplitIndex))/", "-m", model.rawValue, "-t"]
         if let unwrappedSeed = seed {
             args.append(
                 contentsOf: ["-s", String(describing: unwrappedSeed)]
@@ -68,8 +69,27 @@ public struct OpenKeTester: Tester {
                    cvSplitIndex: cvSplitIndex
                 ) 
             }
-        }     
-        return [Metrics]()
+        }
+
+        let result: Metrics = try await runSingleTest(cvSplitIndex: cvSplitIndex)
+        return [result]
+    }
+
+    public func run(seeds: [Int]? = nil) async throws -> [[Metrics]] {
+        return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex in // No parallelism on this level
+            try await runSingleTest(
+               seeds: seeds,
+               cvSplitIndex: cvSplitStringifiedIndex.asInt
+            ) 
+        }
+        // for cvFoldStringifiedIndex in getNestedFolderNames(corpusPath) {
+        //     print(cvFoldStringifiedIndex.asInt)
+        // }
+        // return [Metrics]()
+    }
+
+    public var corpusPath: String {
+        "./Assets/Corpora/\(corpus)"
     }
 }
 

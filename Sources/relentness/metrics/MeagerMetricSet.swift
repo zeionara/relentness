@@ -20,7 +20,10 @@ private struct MeagerMetricSeriesIndexMap {
     }
 }
 
-public struct MeagerMetricSeries {
+let N_DECIMAL_PLACES = 3
+let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
+
+public struct MeagerMetricSeries: CustomStringConvertible {
     public let meanRank: Double
     public let meanReciprocalRank: Double
     public let hitsAtOne: Double
@@ -41,6 +44,15 @@ public struct MeagerMetricSeries {
         hitsAtOne = values[indexMap.hitsAtOne].asDouble
         hitsAtThree = values[indexMap.hitsAtThree].asDouble
         hitsAtTen = values[indexMap.hitsAtTen].asDouble
+    }
+
+    public var description: String {
+        "\(String(format: FLOAT_FORMAT, meanRank))\t\(String(format: FLOAT_FORMAT, meanReciprocalRank))\t" +
+        "\(String(format: FLOAT_FORMAT, hitsAtOne))\t\(String(format: FLOAT_FORMAT, hitsAtThree))\t\(String(format: FLOAT_FORMAT, hitsAtTen))"        
+    }
+
+    public static var header: String {
+        "mr\tmrr\thits@1\thits@3\thits@10"
     }
 }
 
@@ -188,6 +200,14 @@ public extension Array where Element == MeagerMetricSet {
                 }.mean
             }
         )
+    }
+}
+
+public func mean(sets: [[MeagerMetricSet]]) -> [MeagerMetricSet] {
+    (0..<sets.count).map{ i in
+        sets.map{ metricSetList in
+            metricSetList[i]
+        }.mean
     }
 }
 
