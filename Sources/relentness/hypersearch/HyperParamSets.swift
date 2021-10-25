@@ -1,31 +1,75 @@
 import Foundation
 import Yams
 
+public extension Optional where Wrapped == Int {
+    var asStringifiedHyperparameter: String {
+        if let unwrapped = self {
+            return String(describing: unwrapped)
+        }
+        return "-"
+    }
+}
+
+
+public extension Optional where Wrapped == Double {
+    var asStringifiedHyperparameter: String {
+        if let unwrapped = self {
+            return String(format: "%.5f", unwrapped)
+        }
+        return "-"
+    }
+}
+
 public struct HyperParamSet: CustomStringConvertible {
     public let nEpochs: Int?
     public let nBatches: Int?
+    public let alpha: Double?
+    public let margin: Double?
+    public let dimension: Int?
+    public let entityNegativeRate: Int?
 
     public static var header: String {
-        "n-epochs\tn-batches"
+        "n-epochs\tn-batches\talpha\tmargin\tdimension\tentity-neg-rate"
     }
 
     public var description: String {
-        "\(nEpochs == nil ? "-" : String(describing: nEpochs!))\t\(nBatches == nil ? "-" : String(describing: nBatches!))"
+        "\(nEpochs.asStringifiedHyperparameter)\t\(nBatches.asStringifiedHyperparameter)\t\(alpha.asStringifiedHyperparameter)\t\(margin.asStringifiedHyperparameter)\t" +
+        "\(dimension.asStringifiedHyperparameter)\t\(entityNegativeRate.asStringifiedHyperparameter)"
     }
 }
 
 public extension HyperParamSet {
-    public var openKeArgs: [String] {
+    var openKeArgs: [String] {
         var args = [String]()
 
-        if let nEpochs_ = nEpochs {
+        if let _ = nEpochs {
             args.append("-e")
-            args.append(String(describing: nEpochs_))
+            args.append(nEpochs.asStringifiedHyperparameter)
         }
 
-        if let nBatches_ = nBatches {
+        if let _ = nBatches {
             args.append("-b")
-            args.append(String(describing: nBatches_))
+            args.append(nBatches.asStringifiedHyperparameter)
+        }
+
+        if let _ = alpha {
+            args.append("-a")
+            args.append(alpha.asStringifiedHyperparameter)
+        }
+
+        if let _ = margin {
+            args.append("-ma")
+            args.append(margin.asStringifiedHyperparameter)
+        }
+
+        if let _ = dimension {
+            args.append("-d")
+            args.append(dimension.asStringifiedHyperparameter)
+        }
+
+        if let _ = entityNegativeRate {
+            args.append("-n")
+            args.append(entityNegativeRate.asStringifiedHyperparameter)
         }
 
         return args
@@ -46,18 +90,34 @@ public extension Optional where Wrapped: Collection {
 public struct HyperParamStorage: Codable {
     public let nEpochs: [Int]?
     public let nBatches: [Int]?
+    public let alpha: [Double]?
+    public let margin: [Double]?
+    public let dimension: [Int]?
+    public let entityNegativeRate: [Int]?
 
     public var sets: [HyperParamSet] {
         var result = [HyperParamSet]()
 
-        nEpochs.values.map { nEpochs_ in
+        _ = nEpochs.values.map { nEpochs_ in
             for nBatches_ in nBatches.values {
-                result.append(
-                    HyperParamSet(
-                        nEpochs: nEpochs_,
-                        nBatches: nBatches_
-                    )
-                )
+                for alpha_ in alpha.values {
+                    for margin_ in margin.values {
+                        for dimension_ in dimension.values {
+                            for entityNegativeRate_ in entityNegativeRate.values {
+                                result.append(
+                                    HyperParamSet(
+                                        nEpochs: nEpochs_,
+                                        nBatches: nBatches_,
+                                        alpha: alpha_,
+                                        margin: margin_,
+                                        dimension: dimension_,
+                                        entityNegativeRate: entityNegativeRate_
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
             }
             // nBatches.values.map { nBatches_ in
             //     HyperParamSet(
@@ -75,11 +135,11 @@ public struct HyperParamSets {
     let path: String?
     let storage: HyperParamStorage
 
-    public init(_ path: String) { // TODO: Implement exception handling
+    public init(_ corpus: String, _ model: String, _ path: String) { // TODO: Implement exception handling
         let decoder = YAMLDecoder()
         storage = try! decoder.decode(
             HyperParamStorage.self, 
-            from: try! String(contentsOf: URL.local(path)!, encoding: .utf8)
+            from: try! String(contentsOf: URL.local("./Assets/Hypersearch/\(corpus)/\(model)/\(path).yml")!, encoding: .utf8)
         )
         self.path = path
         // print(storage.sets)

@@ -18,7 +18,7 @@ public func traceExecutionTime<Type> (
     _ function: () async throws -> Type
 ) async throws -> (Type, Double) {
     try await measureExecutionTime(function) { output, nSeconds in
-        logger.info(
+        logger.trace(
             "Execution time is \(String(format: "%.3f", nSeconds)) seconds"
         )
         return (output, nSeconds)
