@@ -5,7 +5,7 @@ public protocol Tester {
 
     func runSingleTest(seed: Int?) async throws -> Metrics
     func runSingleTest(seeds: [Int]?) async throws -> [Metrics]
-    func run(seeds: [Int]?) async throws -> [[Metrics]]
+    func run(seeds: [Int]?, hparams: HyperParamSet?) async throws -> [[Metrics]]
 }
 
 public enum OpenKeModel: String {
@@ -43,11 +43,15 @@ public struct OpenKeTester: Tester {
         try await runSingleTest(seed: seed, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil) async throws -> Metrics {
+    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil, hparams: HyperParamSet? = nil) async throws -> Metrics {
         // Configure args
         // print("Worker index = \(workerIndex)")
 
         var args = ["-m", "relentness", "test", "\(corpusPath)/\(String(format: "%04i", cvSplitIndex))/", "-m", model.rawValue, "-t"]
+        if let unwrappedHparams = hparams {
+            args.append(contentsOf: unwrappedHparams.openKeArgs)
+        }
+
         if let unwrappedSeed = seed {
             args.append(
                 contentsOf: ["-s", String(describing: unwrappedSeed)]
@@ -93,7 +97,7 @@ public struct OpenKeTester: Tester {
         try await runSingleTest(seeds: seeds, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seeds: [Int]? = nil, cvSplitIndex: Int) async throws -> [Metrics] {
+    public func runSingleTest(seeds: [Int]? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil) async throws -> [Metrics] {
         if let unwrappedSeeds = seeds {
             // let results = seeds.map{ seed in
             //     runSingleTest(
@@ -104,7 +108,8 @@ public struct OpenKeTester: Tester {
                 try await runSingleTest(
                    seed: seed,
                    cvSplitIndex: cvSplitIndex,
-                   workerIndex: workerIndex
+                   workerIndex: workerIndex,
+                   hparams: hparams
                 ) 
             }
         }
@@ -113,11 +118,12 @@ public struct OpenKeTester: Tester {
         return [result]
     }
 
-    public func run(seeds: [Int]? = nil) async throws -> [[Metrics]] {
+    public func run(seeds: [Int]? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
         return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
             try await runSingleTest(
                seeds: seeds,
-               cvSplitIndex: cvSplitStringifiedIndex.asInt
+               cvSplitIndex: cvSplitStringifiedIndex.asInt,
+               hparams: hparams
             ) 
         }
         // for cvFoldStringifiedIndex in getNestedFolderNames(corpusPath) {

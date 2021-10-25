@@ -8,7 +8,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
-        .package(url: "https://github.com/zeionara/wicked-data", branch: "master")
+        .package(url: "https://github.com/zeionara/wicked-data", branch: "master"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
     ],
@@ -20,7 +21,8 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "wickedData", package: "wicked-data")
+                .product(name: "wickedData", package: "wicked-data"),
+                .product(name: "Yams", package: "Yams")
             ]),
         .testTarget(
             name: "relentnessTests",
