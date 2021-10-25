@@ -31,10 +31,17 @@ class Foo(Model):
 @click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
 @click.option('--output', '-o', type=str, default=None)
 @click.option('--seed', '-s', type=int, default=None)
+@click.option('--n-epochs', '-e', type=int, default=10)
+@click.option('--n-batches', '-b', type=int, default=2)
+@click.option('--margin', '-ma', type=float, default=5.0)
+@click.option('--alpha', '-a', type=float, default=0.1)
+@click.option('--dimension', '-d', type=int, default=10)
+@click.option('--neg-rate', '-n', type=int, default=2)
 @click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
 @click.option('--remove', '-r', type=bool, is_flag=True)
-def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, tsv: bool = False, remove: bool = False):
+def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0, 
+        alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False):
     if not tsv:
         print(f'Got input path "{path}"')
 
@@ -49,13 +56,13 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     config.set_in_path(path)
     config.set_work_threads(8)
-    config.set_train_times(10)
-    config.set_nbatches(2)
-    config.set_alpha(0.1)
-    config.set_margin(1.0)
+    config.set_train_times(n_epochs)
+    config.set_nbatches(n_batches)
+    config.set_alpha(alpha)
+    config.set_margin(margin)
     config.set_bern(0)
-    config.set_dimension(10)
-    config.set_ent_neg_rate(2)
+    config.set_dimension(dimension)
+    config.set_ent_neg_rate(neg_rate)
     config.set_rel_neg_rate(0)
     config.set_opt_method("SGD")
     config.set_log_on(verbose)
