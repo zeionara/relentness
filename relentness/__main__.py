@@ -1,10 +1,10 @@
 from os import makedirs
+from shutil import rmtree
+from uuid import uuid4
 
 import click
-from uuid import uuid4
 import tensorflow as tf
 from keras.models import Model
-from shutil import rmtree
 
 from openke.config import Config
 from openke.models import TransE, ComplEx
@@ -20,6 +20,11 @@ def input_to_output_path(input_path: str, model: str, seed: int = None):
     return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
 
 
+def input_to_images_path(input_path: str, model: str, seed: int = None):
+    input_path_components = input_path[::-1].split("/", maxsplit=4)
+    return f'{input_path_components[4][::-1]}/Images/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
+
+
 class Foo(Model):
     @tf.function
     def compute_mean(self, x, y):
@@ -30,8 +35,9 @@ class Foo(Model):
 @click.argument('path', type=str)
 @click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
 @click.option('--output', '-o', type=str, default=None)
+@click.option('--images', '-i', type=str, default=None)
 @click.option('--seed', '-s', type=int, default=None)
-@click.option('--n-epochs', '-e', type=int, default=10)
+@click.option('--n-epochs', '-e', type=int, default=1000)
 @click.option('--n-batches', '-b', type=int, default=2)
 @click.option('--margin', '-ma', type=float, default=5.0)
 @click.option('--alpha', '-a', type=float, default=0.1)
@@ -40,8 +46,8 @@ class Foo(Model):
 @click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
 @click.option('--remove', '-r', type=bool, is_flag=True)
-def test(path: str, model: str, output: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0, 
-        alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False):
+def test(path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0,
+         alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False):
     if not tsv:
         print(f'Got input path "{path}"')
 
@@ -68,6 +74,7 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     config.set_log_on(verbose)
 
     output_path = input_to_output_path(path, model, seed) if output is None else output
+    images_path = input_to_images_path(path, model, seed) if images is None else images
     # print(output_path)
     makedirs(output_path, exist_ok=True)
     config.set_export_files(f"{output_path}/model.vec.tf", 0)
@@ -87,6 +94,10 @@ def test(path: str, model: str, output: str = None, verbose: bool = False, seed:
     finally:
         if remove:
             rmtree(output_path)
+
+    if getattr(config.trainModel, 'visualize_entity_embeddings') is not None:
+        config.trainModel.visualize_entity_embeddings(model='pca', path=images_path)
+        config.trainModel.visualize_relationship_embeddings(model='pca', path=images_path)
 
 
 if __name__ == '__main__':
