@@ -31,6 +31,15 @@ public struct HyperSearch: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Run each worker on different gpu")
     var differentGpus = false
 
+    @Flag(name: .shortAndLong, help: "Enably wordy way of logging")
+    var verbose = false
+
+    @Flag(name: .long, help: "Enably wordy way of logging")
+    var discardExistingLogFile = false
+
+    @Option(name: .shortAndLong, help: "Name of log file")
+    var logFileName: String?
+
     public static var configuration = CommandConfiguration(
         commandName: "hsearch",
         abstract: "Run model testing on different sets of hyperparameters"
@@ -39,8 +48,10 @@ public struct HyperSearch: ParsableCommand {
     public init() {}
 
     mutating public func run() {
-        var logger = Logger(label: "main")
-        logger.logLevel = .info
+
+        setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
+
+        let logger = Logger(level: verbose ? .trace : .info, label: "main")
 
         let env_ = env
         let corpus_ = corpus
@@ -55,7 +66,7 @@ public struct HyperSearch: ParsableCommand {
         let path_ = path
 
 
-        print("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
+        logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
         BlockingTask {
             let sets = HyperParamSets(corpus_, model_.rawValue, path_)
@@ -77,7 +88,7 @@ public struct HyperSearch: ParsableCommand {
                         )
                     }
 
-                    print("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+                    logger.info("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
                     // print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
                     // for metricsForCvSplit in metrics {
                     //     for metricsForSeed in metricsForCvSplit {
