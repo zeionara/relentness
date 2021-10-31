@@ -25,7 +25,6 @@ public extension String {
         }
         
         do {
-            print(url)
             let fileHandle = try FileHandle(forWritingTo: url)
             fileHandle.seekToEndOfFile()
             // convert your string to data or load it from another resource
