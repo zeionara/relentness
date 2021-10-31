@@ -32,13 +32,18 @@ public class DictionaryOfArrays<Key, Item> where Key: Hashable {
     //}
 }
                                                                                     
+public typealias RelationUsageStats = (n: Int, total: Int, ratio: Double)
 public class TriplesBatch {
     public let fromHead: DictionaryOfArrays<Int, IndexedTriple> //  [Int: [IndexedTriple]]
     public let fromRelation: DictionaryOfArrays<Int, IndexedTriple> //  [Int: [IndexedTriple]]
     public let fromTail: DictionaryOfArrays<Int, IndexedTriple> //  [Int: [IndexedTriple]]
     public let fromEntity: DictionaryOfArrays<Int, IndexedTriple> //  [Int: [IndexedTriple]]
 
-    public init(_ path: String) {
+    public let name: String
+
+    public init(_ path: String, name: String) {
+        self.name = name
+
         let contents = try! String(contentsOf: URL.local(path)!, encoding: .utf8) // TODO: Add exception handling
         let contentsRows = contents.rows
         let contentsWithoutHeader = contents.rows[1..<contentsRows.count]
@@ -74,6 +79,26 @@ public class TriplesBatch {
         self.fromRelation = fromRelation
         self.fromTail = fromTail
         self.fromEntity = fromEntity
+    }
+
+    public var relationStats: [Int: RelationUsageStats] {
+        var nTotalTriples = 0
+        var nTriples = Array(repeating: 0, count: fromRelation.items.count)
+        // print(nTriples)
+
+        for (relationId, triples) in fromRelation.items {
+            let count = triples.count
+            nTriples[relationId] = count
+            nTotalTriples += count
+        }
+
+        var stats = [Int: RelationUsageStats]()    
+
+        _ = nTriples.enumerated().map{ (i, count) in
+            stats[i] = (n: count, total: nTotalTriples, ratio: Double(count) / Double(nTotalTriples))
+        }
+
+        return stats
     }
 }
     
@@ -134,7 +159,7 @@ enum DatasetLookupError: Error {
 
 public struct OpenKEImporter {
     private let entityMapping: OpenKEMapping
-    private let relationshipMapping: OpenKEMapping
+    public let relationshipMapping: OpenKEMapping
     private let batches: [TriplesBatch]
 
     public init(_ path: String, batches: [String]? = nil) {
@@ -145,7 +170,8 @@ public struct OpenKEImporter {
         for batch in batches ?? ["train2id", "test2id", "valid2id"] {
             batches_.append(
                 TriplesBatch(
-                    "./Assets/Corpora/\(path)/\(batch).txt"
+                    "./Assets/Corpora/\(path)/\(batch).txt",
+                    name: batch
                 ) 
             )
         }
@@ -254,5 +280,26 @@ public struct OpenKEImporter {
         throw DatasetLookupError.noSuchRelation(relation: relation)
         // }
     }
+
+    public var relationStats: [String: [String: RelationUsageStats]] {
+        var stats = [String: [String: RelationUsageStats]]()
+
+        for batch in batches {
+            stats[batch.name] = {
+                var batchStats = [String: RelationUsageStats]()
+
+                for (relationId, batchRelationStats) in batch.relationStats {
+                    // print(relationId)
+                    batchStats[relationshipMapping[relationId]!] = batchRelationStats
+                }
+
+                return batchStats
+            }()
+        }
+
+        return stats
+    }
 }
+
+
 

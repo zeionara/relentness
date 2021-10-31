@@ -55,5 +55,15 @@ public struct ExploreDataset: ParsableCommand {
         } catch {
             print(error)
         }
+
+        print(importer.relationStats)
+
+        for (batchName, batchStats) in importer.relationStats {
+            logger.trace("\(batchName)")
+            for (relationName, batchRelationStats) in batchStats {
+                logger.trace("\(importer.relationshipMapping[relationName]!.first!)\t\(relationName)\t\(batchRelationStats.n) / \(batchRelationStats.total)\t\(String(format: "%.4f", batchRelationStats.ratio))")
+            }
+            logger.trace("")
+        }
     }
 }
