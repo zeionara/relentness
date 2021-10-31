@@ -20,7 +20,7 @@ public extension Optional where Wrapped == Double {
     }
 }
 
-public struct HyperParamSet: CustomStringConvertible {
+public struct HyperParamSet: CustomStringConvertible, Sendable {
     public let nEpochs: Int?
     public let nBatches: Int?
     public let alpha: Double?

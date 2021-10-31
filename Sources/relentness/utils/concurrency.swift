@@ -1,10 +1,10 @@
 let DEFAULT_N_WORKERS = 2
 
-extension Collection {
+extension Collection where Element: Sendable {
     //
     // Taken from https://gist.github.com/DougGregor/92a2e4f6e11f6d733fb5065e9d1c880f
     //
-    func asyncMap<T>(nWorkers requestedNWorkers: Int? = nil, _ transform: @escaping (Element, Int) async throws -> T) async throws -> [T] {
+    func asyncMap<T: Sendable>(nWorkers requestedNWorkers: Int? = nil, _ transform: @escaping @Sendable (Element, Int) async throws -> T) async throws -> [T] {
         let nWorkers = requestedNWorkers ?? DEFAULT_N_WORKERS
 
         let n = self.count
@@ -24,9 +24,10 @@ extension Collection {
                 if i == self.endIndex { return }
 
                 let unwrappedWorkerIndex = workerIndex ?? submitted
+                let element = self[i]
 
-                group.addTask { [submitted, unwrappedWorkerIndex, i] in
-                    let value = try await transform(self[i], unwrappedWorkerIndex)
+                group.addTask { [submitted, unwrappedWorkerIndex] in
+                    let value = try await transform(element, unwrappedWorkerIndex)
                     return (submitted, unwrappedWorkerIndex, value)
                 }
 
@@ -41,7 +42,7 @@ extension Collection {
             }
 
             // as each task completes, submit a new task until we run out of work
-            while let (index, workerIndex, taskResult) = try! await group.next() {
+            while let (index, workerIndex, taskResult) = try? await group.next() {
                 result[index] = taskResult
 
                 try Task.checkCancellation()

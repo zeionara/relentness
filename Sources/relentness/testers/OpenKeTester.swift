@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol Tester {
+public protocol Tester: Sendable {
     associatedtype Metrics: MetricSet
 
     func runSingleTest(seed: Int?) async throws -> Metrics
@@ -8,7 +8,7 @@ public protocol Tester {
     func run(seeds: [Int]?, hparams: HyperParamSet?) async throws -> [[Metrics]]
 }
 
-public enum OpenKeModel: String {
+public enum OpenKeModel: String, Sendable {
     case transe
     case complex
 }
@@ -119,7 +119,8 @@ public struct OpenKeTester: Tester {
     }
 
     public func run(seeds: [Int]? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
-        return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
+        // return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
+        return try await getNestedFolderNames(corpusPath).map { cvSplitStringifiedIndex in // No parallelism on this level
             try await runSingleTest(
                seeds: seeds,
                cvSplitIndex: cvSplitStringifiedIndex.asInt,
@@ -134,6 +135,20 @@ public struct OpenKeTester: Tester {
 
     public var corpusPath: String {
         "./Assets/Corpora/\(corpus)"
+    }
+}
+
+public extension Array {
+    func map<Type>(closure: (Element) async throws -> Type) async throws -> [Type] {
+        var result = [Type]()
+
+        for item in self {
+            result.append(
+                try await closure(item)
+            )
+        }
+
+        return result
     }
 }
 

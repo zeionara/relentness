@@ -26,7 +26,7 @@ let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
 infix operator +++: AdditionPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
 infix operator /++: MultiplicationPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
 
-public struct MeagerMetricSeries: CustomStringConvertible {
+public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
     public let meanRank: Double
     public let meanReciprocalRank: Double
     public let hitsAtOne: Double
@@ -169,7 +169,7 @@ public extension MeagerMetricSeries {
     }
 }
 
-public struct MeagerMetricSubset {
+public struct MeagerMetricSubset: Sendable {
     public let head: MeagerMetricSeries
     public let tail: MeagerMetricSeries
     public let mean: MeagerMetricSeries
@@ -255,7 +255,7 @@ public extension Array where Element == MeagerMetricSubset {
     }
 }
 
-public struct MeagerMetricSet: MetricSet, CustomStringConvertible {
+public struct MeagerMetricSet: MetricSet, CustomStringConvertible, Sendable {
     public let subsets: [MeagerMetricSubset]
     public let description: String
 
