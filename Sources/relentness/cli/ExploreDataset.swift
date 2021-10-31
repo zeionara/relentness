@@ -56,7 +56,7 @@ public struct ExploreDataset: ParsableCommand {
             print(error)
         }
 
-        print(importer.relationStats)
+        // print(importer.relationStats)
 
         for (batchName, batchStats) in importer.relationStats {
             logger.trace("\(batchName)")

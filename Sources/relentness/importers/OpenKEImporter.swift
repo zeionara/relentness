@@ -81,9 +81,11 @@ public class TriplesBatch {
         self.fromEntity = fromEntity
     }
 
-    public var relationStats: [Int: RelationUsageStats] {
+    public func getRelationStats(nRelations: Int) -> [Int: RelationUsageStats] {
+        // print("Generating batchwise relation stats")
         var nTotalTriples = 0
-        var nTriples = Array(repeating: 0, count: fromRelation.items.count)
+        var nTriples = Array(repeating: 0, count: nRelations)
+        // print(fromRelation.items)
         // print(nTriples)
 
         for (relationId, triples) in fromRelation.items {
@@ -91,12 +93,14 @@ public class TriplesBatch {
             nTriples[relationId] = count
             nTotalTriples += count
         }
+        print("Generation batchwise relation stats")
 
         var stats = [Int: RelationUsageStats]()    
 
         _ = nTriples.enumerated().map{ (i, count) in
             stats[i] = (n: count, total: nTotalTriples, ratio: Double(count) / Double(nTotalTriples))
         }
+        // print("Generated batchwise relation stats")
 
         return stats
     }
@@ -148,6 +152,10 @@ public class OpenKEMapping {
         get {
             return self.fromId[id]
         }
+    }
+
+    public var count: Int {
+        return self.fromId.count
     }
 }
 
@@ -285,21 +293,23 @@ public struct OpenKEImporter {
         var stats = [String: [String: RelationUsageStats]]()
 
         for batch in batches {
+            // print("Processing batch")
             stats[batch.name] = {
                 var batchStats = [String: RelationUsageStats]()
 
-                for (relationId, batchRelationStats) in batch.relationStats {
+                // print("Before loop")
+                for (relationId, batchRelationStats) in batch.getRelationStats(nRelations: self.relationshipMapping.count) {
                     // print(relationId)
                     batchStats[relationshipMapping[relationId]!] = batchRelationStats
+                    // print("-")
                 }
 
                 return batchStats
             }()
+            // print("Processed batch")
         }
 
         return stats
     }
 }
-
-
 

@@ -99,18 +99,25 @@ public struct OpenKeTester: Tester {
 
     public func runSingleTest(seeds: [Int]? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil) async throws -> [Metrics] {
         if let unwrappedSeeds = seeds {
-            // let results = seeds.map{ seed in
-            //     runSingleTest(
-            //         seed: seed
-            //     )
-            // }
-            return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
-                try await runSingleTest(
-                   seed: seed,
-                   cvSplitIndex: cvSplitIndex,
-                   workerIndex: workerIndex,
-                   hparams: hparams
-                ) 
+            if nWorkers == nil || nWorkers! > 1 {
+                return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
+                    try await runSingleTest(
+                       seed: seed,
+                       cvSplitIndex: cvSplitIndex,
+                       workerIndex: workerIndex,
+                       hparams: hparams
+                    ) 
+                }
+            } else {
+               // print("Testing without parallelism...")
+               return try await unwrappedSeeds.map { seed in
+                    try await runSingleTest(
+                       seed: seed,
+                       cvSplitIndex: cvSplitIndex,
+                       workerIndex: 0,
+                       hparams: hparams
+                    ) 
+                }
             }
         }
 
