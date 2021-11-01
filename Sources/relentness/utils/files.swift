@@ -89,6 +89,30 @@ public func writeLines(_ path: String, _ lines: [String], logger: Logger? = nil)
     }
 }
 
+public func write(_ path: String, _ content: String, logger: Logger? = nil) {
+    do {                                                                                                                                                                                                                 
+        // print("Writing to \(path)")
+        makeSureFileExists(path, recreate: true)
+        if let url = URL.local(path) {                                                                                                                                                              
+            try content.write(to: url, atomically: false, encoding: .utf8)                                                                                                                            
+        } else {                                                                                                                                                                                    
+            let message = "Path \(path) cannot be considered a valid url" 
+            if let loggerUnwrapped = logger {
+                loggerUnwrapped.error("\(message)")
+            } else {
+                print(message)
+            }
+        }                                                                                                                                                                                           
+    } catch {                                                                                                                                                                                       
+        let message = "Cannot save data bundle as tsv because of exception: \(error.localizedDescription)" 
+        if let loggerUnwrapped = logger {
+            loggerUnwrapped.error("\(message)")
+        } else {
+            print(message)
+        }
+    }
+}
+
 public func getNestedFolderNames(_ path: String) -> [String] { // TODO: Implement exception handling
     let fileManager = FileManager.default
     let contents = try! fileManager.contentsOfDirectory(

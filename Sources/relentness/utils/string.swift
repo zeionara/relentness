@@ -9,6 +9,10 @@ public extension String {
         self.components(separatedBy: "\t")
     }
 
+    var lastPathComponent: String {
+        self.components(separatedBy: "/").last!
+    }
+
     var asDouble: Double {
         Double(self)!
     }

@@ -30,6 +30,16 @@ public class DictionaryOfArrays<Key, Item> where Key: Hashable {
         }
     }
     //}
+
+    public func map<Value>(_ transformValue: (Key, [Item]) -> Value) -> [Key: Value] {
+        var mappedValues = [Key: Value]() 
+
+        for (key, elements) in items {
+            mappedValues[key] = transformValue(key, elements)
+        }
+
+        return mappedValues
+    }
 }
                                                                                     
 public typealias RelationUsageStats = (n: Int, total: Int, ratio: Double)
@@ -126,6 +136,8 @@ public class OpenKEMapping {
             let nameAndId = row.tabSeparatedValues
 
             return (nameAndId.first!, nameAndId.last!) 
+        }.sorted{
+            $0.1 < $1.1
         }
 
         for (name, id) in decodedRows {
@@ -166,11 +178,13 @@ enum DatasetLookupError: Error {
 }
 
 public struct OpenKEImporter {
-    private let entityMapping: OpenKEMapping
+    public let entityMapping: OpenKEMapping
     public let relationshipMapping: OpenKEMapping
-    private let batches: [TriplesBatch]
+    public let batches: [TriplesBatch]
+    public let path: String
 
     public init(_ path: String, batches: [String]? = nil) {
+        self.path = path
         entityMapping = OpenKEMapping("./Assets/Corpora/\(path)/entity2id.txt")
         relationshipMapping = OpenKEMapping("./Assets/Corpora/\(path)/relation2id.txt")
 
