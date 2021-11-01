@@ -17,7 +17,7 @@ public struct ExportDataset: ParsableCommand {
     var logFileName: String?
 
     @Argument(help: "Names of files containing indexed triples to consider")
-    var batches: [String] = ["train2id"]
+    var batches: [String] = ["train2id", "test2id", "valid2id"]
 
     @Option(name: .shortAndLong, help: "Path to the output file")
     var output: String?

@@ -6,6 +6,10 @@ public typealias StringifiedTriple = (head: String, relation: String, tail: Stri
 public class DictionaryOfArrays<Key, Item> where Key: Hashable {
     public var items: [Key: [Item]]
 
+    public init(_ items: [Key: [Item]]) {
+        self.items = items
+    }
+
     public init() {
         items = [Key: [Item]]()
     }
@@ -40,6 +44,24 @@ public class DictionaryOfArrays<Key, Item> where Key: Hashable {
 
         return mappedValues
     }
+
+    public static func +(lhs: DictionaryOfArrays<Key, Item>, rhs: DictionaryOfArrays<Key, Item>) -> DictionaryOfArrays<Key, Item> {
+        var joinedContent = [Key: [Item]]()
+
+        for (key, items) in lhs.items {
+            joinedContent[key] = items
+        }
+
+        for (key, items) in rhs.items {
+            if let existingItems = joinedContent[key] {
+                joinedContent[key] = existingItems + items
+            } else {
+                joinedContent[key] = items
+            }
+        }
+
+        return DictionaryOfArrays<Key, Item>(joinedContent)
+    }
 }
                                                                                     
 public typealias RelationUsageStats = (n: Int, total: Int, ratio: Double)
@@ -50,6 +72,18 @@ public class TriplesBatch {
     public let fromEntity: DictionaryOfArrays<Int, IndexedTriple> //  [Int: [IndexedTriple]]
 
     public let name: String
+
+    public init(
+        fromHead: DictionaryOfArrays<Int, IndexedTriple>, fromRelation: DictionaryOfArrays<Int, IndexedTriple>, fromTail: DictionaryOfArrays<Int, IndexedTriple>,
+        fromEntity: DictionaryOfArrays<Int, IndexedTriple>, name: String
+    ) {
+           self.fromHead = fromHead
+           self.fromRelation = fromRelation
+           self.fromTail = fromTail
+           self.fromEntity = fromEntity
+           self.name = name
+   }
+
 
     public init(_ path: String, name: String) {
         self.name = name
