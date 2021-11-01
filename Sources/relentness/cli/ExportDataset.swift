@@ -32,7 +32,7 @@ public struct ExportDataset: ParsableCommand {
     mutating public func run() {
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
 
-        let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        // let logger = Logger(level: verbose ? .trace : .info, label: "main")
         
         let importer = OpenKEImporter(corpus, batches: batches)
 

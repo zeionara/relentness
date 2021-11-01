@@ -18,7 +18,7 @@ extension Collection where Element: Sendable {
 
             var i = self.startIndex
             var submitted = 0
-            var freeWorkerIndices = Set(0..<nWorkers)
+            // var freeWorkerIndices = Set(0..<nWorkers)
 
             func submitNext(_ workerIndex: Int? = nil) async throws {
                 if i == self.endIndex { return }
@@ -26,27 +26,51 @@ extension Collection where Element: Sendable {
                 let unwrappedWorkerIndex = workerIndex ?? submitted
                 let element = self[i]
 
-                group.addTask { [submitted, unwrappedWorkerIndex] in
+                group.addTask { [submitted, unwrappedWorkerIndex, element] in
+                    print("Getting value \(submitted)")
                     let value = try await transform(element, unwrappedWorkerIndex)
+                    print("Got value \(submitted)")
                     return (submitted, unwrappedWorkerIndex, value)
                 }
 
-                freeWorkerIndices.remove(submitted)
+                // freeWorkerIndices.remove(submitted)
                 submitted += 1
                 formIndex(after: &i)
             }
 
             // submit first initial tasks
+            print("Submitting initial tasks...")
             for _ in 0..<nWorkers {
                 try await submitNext()
             }
 
             // as each task completes, submit a new task until we run out of work
-            while let (index, workerIndex, taskResult) = try? await group.next() {
+            print("Waiting for submitted tasks to complete (already collected \(result.compactMap{ $0 }.count) results)...")
+            // while let (index, workerIndex, taskResult) = try? await group.next() {
+            for try await (index, workerIndex, taskResult) in group {
                 result[index] = taskResult
 
+                print("Checking cancellation...")
                 try Task.checkCancellation()
-                try await submitNext(workerIndex)
+                print("Submitting next...")
+                // try await submitNext(workerIndex)
+
+                if i < self.endIndex {
+                    let element = self[i]
+
+                    group.addTask { [submitted, workerIndex] in
+                        print("Getting value \(submitted)...")
+                        let value = try await transform(element, workerIndex)
+                        print("Got value \(submitted)")
+                        return (submitted, workerIndex, value)
+                    }
+
+                    submitted += 1
+                    formIndex(after: &i)
+                }
+
+                print("Submitted next")
+                print("Is empty: \(group.isEmpty)")
             }
 
             assert(result.count == n)

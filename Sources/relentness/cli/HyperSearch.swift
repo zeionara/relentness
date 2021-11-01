@@ -73,7 +73,8 @@ public struct HyperSearch: ParsableCommand {
 
             for hparams in sets.storage.sets {
                 do {
-                    let (metrics, executionTime) = try await traceExecutionTime(logger) {
+                    let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
+                        // print("Calling tester...")
                         try await OpenKeTester(
                             model: model_.asOpenKeModel,
                             env: env_,
@@ -86,9 +87,12 @@ public struct HyperSearch: ParsableCommand {
                             seeds: seeds_.count > 0 ? seeds_ : nil,
                             hparams: hparams
                         )
+                        // print("Called tester")
+                        // return result
                     }
 
                     logger.info("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+                    // print("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
                     // print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
                     // for metricsForCvSplit in metrics {
                     //     for metricsForSeed in metricsForCvSplit {

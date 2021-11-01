@@ -79,11 +79,14 @@ public struct OpenKeTester: Tester {
         // let output = 
         return try await measureExecutionTime {
             // print("/home/\(USER)/anaconda3/envs/\(env)/bin/python")
-            try await runSubprocessAndGetOutput(
+            // print("Run and get output")
+            let output = try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
                 args: args,
                 env: envVars
             )
+            // print("Run and got output")
+            return output
         } handleExecutionTimeMeasurement: { output, nSeconds in
             MeagerMetricSet(
                 output,
@@ -128,11 +131,14 @@ public struct OpenKeTester: Tester {
     public func run(seeds: [Int]? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
         // return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
         return try await getNestedFolderNames(corpusPath).map { cvSplitStringifiedIndex in // No parallelism on this level
-            try await runSingleTest(
+            // print("Running single test...")
+            let result =  try await runSingleTest(
                seeds: seeds,
                cvSplitIndex: cvSplitStringifiedIndex.asInt,
                hparams: hparams
             ) 
+            // print("Run single test")
+            return result
         }
         // for cvFoldStringifiedIndex in getNestedFolderNames(corpusPath) {
         //     print(cvFoldStringifiedIndex.asInt)
