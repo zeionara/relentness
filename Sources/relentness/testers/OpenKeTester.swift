@@ -4,8 +4,8 @@ public protocol Tester: Sendable {
     associatedtype Metrics: MetricSet
 
     func runSingleTest(seed: Int?) async throws -> Metrics
-    func runSingleTest(seeds: [Int]?) async throws -> [Metrics]
-    func run(seeds: [Int]?, hparams: HyperParamSet?) async throws -> [[Metrics]]
+    func runSingleTest(seeds: [Int]?, delay: Double?) async throws -> [Metrics]
+    func run(seeds: [Int]?, delay: Double?, hparams: HyperParamSet?) async throws -> [[Metrics]]
 }
 
 public enum OpenKeModel: String, Sendable {
@@ -44,8 +44,8 @@ public struct OpenKeTester: Tester {
     }
 
     public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil, hparams: HyperParamSet? = nil) async throws -> Metrics {
+
         // Configure args
-        // print("Worker index = \(workerIndex)")
 
         var args = ["-m", "relentness", "test", "\(corpusPath)/\(String(format: "%04i", cvSplitIndex))/", "-m", model.rawValue, "-t"]
         if let unwrappedHparams = hparams {
@@ -74,40 +74,28 @@ public struct OpenKeTester: Tester {
             envVars["CUDA_VISIBLE_DEVICES"] = String(describing: unwrappedWorkerIndex)
         }
 
-        // print(envVars)
-
-        // let output = 
-        let metrics: Metrics = try await measureExecutionTime {
-            // print("/home/\(USER)/anaconda3/envs/\(env)/bin/python")
-            // print("Run and get output")
+        return try await measureExecutionTime {
             try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
                 args: args,
                 env: envVars
             )
-            // print("Run and got output")
-            // return output
         } handleExecutionTimeMeasurement: { output, nSeconds in
-            print("Process output")
-            print(output)
             return MeagerMetricSet(
                 output,
                 time: nSeconds
             )
         }
-
-        return metrics
-        // return MeagerMetricSet(output)
     }
 
-    public func runSingleTest(seeds: [Int]? = nil) async throws -> [Metrics] {
-        try await runSingleTest(seeds: seeds, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
+    public func runSingleTest(seeds: [Int]? = nil, delay: Double?) async throws -> [Metrics] {
+        try await runSingleTest(seeds: seeds, delay: delay, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seeds: [Int]? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil) async throws -> [Metrics] {
+    public func runSingleTest(seeds: [Int]? = nil, delay: Double? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil) async throws -> [Metrics] {
         if let unwrappedSeeds = seeds {
             if nWorkers == nil || nWorkers! > 1 {
-                return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
+                return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers, delay: delay) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
                     try await runSingleTest(
                        seed: seed,
                        cvSplitIndex: cvSplitIndex,
@@ -116,7 +104,6 @@ public struct OpenKeTester: Tester {
                     ) 
                 }
             } else {
-               // print("Testing without parallelism...")
                return try await unwrappedSeeds.map { seed in
                     try await runSingleTest(
                        seed: seed,
@@ -132,22 +119,16 @@ public struct OpenKeTester: Tester {
         return [result]
     }
 
-    public func run(seeds: [Int]? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
-        // return try await getNestedFolderNames(corpusPath).asyncMap(nWorkers: 1) { cvSplitStringifiedIndex, _ in // No parallelism on this level
+    public func run(seeds: [Int]? = nil, delay: Double? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
         return try await getNestedFolderNames(corpusPath).map { cvSplitStringifiedIndex in // No parallelism on this level
-            // print("Running single test...")
             let result =  try await runSingleTest(
                seeds: seeds,
+               delay: delay,
                cvSplitIndex: cvSplitStringifiedIndex.asInt,
                hparams: hparams
             ) 
-            // print("Run single test")
             return result
         }
-        // for cvFoldStringifiedIndex in getNestedFolderNames(corpusPath) {
-        //     print(cvFoldStringifiedIndex.asInt)
-        // }
-        // return [Metrics]()
     }
 
     public var corpusPath: String {

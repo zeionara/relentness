@@ -40,6 +40,9 @@ public struct HyperSearch: ParsableCommand {
     @Option(name: .shortAndLong, help: "Name of log file")
     var logFileName: String?
 
+    @Option(name: .long, help: "Delay to wait for before running consecutive tests (in seconds)")
+    var delay: Double?
+
     public static var configuration = CommandConfiguration(
         commandName: "hsearch",
         abstract: "Run model testing on different sets of hyperparameters"
@@ -64,6 +67,7 @@ public struct HyperSearch: ParsableCommand {
         let differentGpus_ = differentGpus
 
         let path_ = path
+        let delay_ = delay
 
 
         logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
@@ -74,7 +78,6 @@ public struct HyperSearch: ParsableCommand {
             for hparams in sets.storage.sets {
                 do {
                     let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
-                        // print("Calling tester...")
                         try await OpenKeTester(
                             model: model_.asOpenKeModel,
                             env: env_,
@@ -85,22 +88,12 @@ public struct HyperSearch: ParsableCommand {
                             differentGpus: differentGpus_
                         ).run(
                             seeds: seeds_.count > 0 ? seeds_ : nil,
+                            delay: delay_,
                             hparams: hparams
                         )
-                        // print("Called tester")
-                        // return result
                     }
 
                     logger.info("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
-                    // print("\(hparams)\t\(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
-                    // print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
-                    // for metricsForCvSplit in metrics {
-                    //     for metricsForSeed in metricsForCvSplit {
-                    //         print(metricsForSeed.mean.mean)
-                    //     }
-                    // }
-                    // print(metrics.map{$0.mean.mean})
-                    // print(metrics.mean.mean.mean) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
                 } catch {
                     print("Unexpected error \(error), cannot complete testing")
                 }
@@ -108,3 +101,4 @@ public struct HyperSearch: ParsableCommand {
         }
     }
 }
+
