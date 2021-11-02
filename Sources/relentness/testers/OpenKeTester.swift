@@ -77,22 +77,26 @@ public struct OpenKeTester: Tester {
         // print(envVars)
 
         // let output = 
-        return try await measureExecutionTime {
+        let metrics: Metrics = try await measureExecutionTime {
             // print("/home/\(USER)/anaconda3/envs/\(env)/bin/python")
             // print("Run and get output")
-            let output = try await runSubprocessAndGetOutput(
+            try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
                 args: args,
                 env: envVars
             )
             // print("Run and got output")
-            return output
+            // return output
         } handleExecutionTimeMeasurement: { output, nSeconds in
-            MeagerMetricSet(
+            print("Process output")
+            print(output)
+            return MeagerMetricSet(
                 output,
                 time: nSeconds
             )
         }
+
+        return metrics
         // return MeagerMetricSet(output)
     }
 

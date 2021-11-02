@@ -53,21 +53,22 @@ extension Collection where Element: Sendable {
                 print("Checking cancellation...")
                 try Task.checkCancellation()
                 print("Submitting next...")
-                // try await submitNext(workerIndex)
 
-                if i < self.endIndex {
-                    let element = self[i]
+                try await submitNext(workerIndex)
 
-                    group.addTask { [submitted, workerIndex] in
-                        print("Getting value \(submitted)...")
-                        let value = try await transform(element, workerIndex)
-                        print("Got value \(submitted)")
-                        return (submitted, workerIndex, value)
-                    }
+                // if i < self.endIndex {
+                //     let element = self[i]
 
-                    submitted += 1
-                    formIndex(after: &i)
-                }
+                //     group.addTask { [submitted, workerIndex] in
+                //         print("Getting value \(submitted)...")
+                //         let value = try await transform(element, workerIndex)
+                //         print("Got value \(submitted)")
+                //         return (submitted, workerIndex, value)
+                //     }
+
+                //     submitted += 1
+                //     formIndex(after: &i)
+                // }
 
                 print("Submitted next")
                 print("Is empty: \(group.isEmpty)")

@@ -7,7 +7,7 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
     task.environment = env
     task.arguments = args
 
-    // print("Allocate pipes...")
+    print("Allocate pipes...")
     let outputPipe = Pipe()
     let inputPipe = Pipe()
 
@@ -20,19 +20,62 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
     }
 
     task.standardOutput = outputPipe
-    task.standardInput = inputPipe
+    task.standardError = inputPipe
+    // task.standardInput = NSFileHandle.fileHandleWithNullDevice()
 
-    // print("Run task...")
+    print("Run task...")
     try task.run()
 
-    // print("Read data...")
-    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+    print("Reading data...")
+    let outputData = try? outputPipe.fileHandleForReading.readToEnd()
+    let errorData = try? inputPipe.fileHandleForReading.readToEnd()
+    // let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
 
+    // var outputData = Data()
+    // var index = 0
+    
+    // while task.isRunning { 
+    //    print("Reading chunk")
+    //    let outputDataChunk = try! outputPipe.fileHandleForReading.read(upToCount: 1280)
+    //    print("Read chunk")
+    //    if outputData.isEmpty {
+    //        print("Finished reading at \(index) call")
+    //        break
+    //    }
+    //    print("Read \(outputData.count) bytes at \(index) call")
+    //    index += 1
 
-    // print("Decode string...")
-    let output = String(decoding: outputData, as: UTF8.self)
+    // outputPipe.fileHandleForReading.readabilityHandler = { handler in
+    //     let data = handler.availableData
 
-    // print("Done")
+    //     if data.isEmpty {
+    //         outputPipe.fileHandleForReading.readabilityHandler = nil
+    //     } else {
+    //         outputData.append(data)
+    //     }
+    // }
+
+    //    outputData.append(outputDataChunk!)
+    // }
+
+    // print("Lines:")
+    // for await line in outputPipe.fileHandleForReading.AsyncBytes {
+    //     print(line)
+    // }
+
+    print("Waiting fo task to exit...")
+    task.waitUntilExit()
+
+    print("Decode string...")
+    let output = String(decoding: outputData!, as: UTF8.self)
+    let _ = errorData == nil ? nil : String(decoding: errorData!, as: UTF8.self)
+
+    // let output = String(decoding: outputPipe.fileHandleForReading.availableData, as: UTF8.self)
+    // let output = String(decoding: outputData, as: UTF8.self)
+    print("Output: ")
+    print(output)
+
+    print("Done")
 
     return dropNewLine ? String(output.dropLast()) : String(output)
 }
