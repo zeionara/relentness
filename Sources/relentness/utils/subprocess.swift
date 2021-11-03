@@ -24,7 +24,7 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
                     // sleep(30)
                     // let _ = try? await runSubprocessAndGetOutput(path: "/usr/bin/kill", args: ["-9", String(describing: task.processIdentifier), "||", "true"], env: [String: String](), retryOnError: false)
                     let _ = try? await runSubprocessAndGetOutput(path: "/bin/bash", args: ["-c", "kill -9 \(task.processIdentifier) 2>/dev/null || echo 'no such process'"], env: [String: String](), retryOnError: false)
-                    print("Terminated task with pid = \(task.processIdentifier)")
+                    // print("Terminated task with pid = \(task.processIdentifier)")
                 }
             }
         }
