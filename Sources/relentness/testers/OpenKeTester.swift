@@ -28,7 +28,9 @@ public struct OpenKeTester: Tester {
     public let gpu: Bool
     public let differentGpus: Bool
 
-    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil, remove: Bool = false, gpu: Bool = true, differentGpus: Bool = true) {
+    public let terminationDelay: Double?
+
+    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil, remove: Bool = false, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil) {
         self.model = model
         self.env = env
         self.corpus = corpus
@@ -37,13 +39,14 @@ public struct OpenKeTester: Tester {
         self.remove = remove
         self.gpu = gpu
         self.differentGpus = differentGpus
+        self.terminationDelay = terminationDelay
     }
 
     public func runSingleTest(seed: Int? = nil) async throws -> Metrics {
         try await runSingleTest(seed: seed, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil, hparams: HyperParamSet? = nil) async throws -> Metrics {
+    public func runSingleTest(seed: Int? = nil, cvSplitIndex: Int, workerIndex: Int? = nil, hparams: HyperParamSet? = nil, usingValidationSubset: Bool = false) async throws -> Metrics {
 
         // Configure args
 
@@ -64,6 +67,10 @@ public struct OpenKeTester: Tester {
             args.append("-r")
         }
 
+        if usingValidationSubset {
+            args.append("-val")
+        }
+
         // Configure env
 
         var envVars = ["TF_CPP_MIN_LOG_LEVEL": "3"]
@@ -78,7 +85,8 @@ public struct OpenKeTester: Tester {
             try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
                 args: args,
-                env: envVars
+                env: envVars,
+                terminationDelay: terminationDelay
             )
         } handleExecutionTimeMeasurement: { output, nSeconds in
             return MeagerMetricSet(
@@ -92,7 +100,7 @@ public struct OpenKeTester: Tester {
         try await runSingleTest(seeds: seeds, delay: delay, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX)
     }
 
-    public func runSingleTest(seeds: [Int]? = nil, delay: Double? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil) async throws -> [Metrics] {
+    public func runSingleTest(seeds: [Int]? = nil, delay: Double? = nil, cvSplitIndex: Int, hparams: HyperParamSet? = nil, usingValidationSubset: Bool = false) async throws -> [Metrics] {
         if let unwrappedSeeds = seeds {
             if nWorkers == nil || nWorkers! > 1 {
                 return try await unwrappedSeeds.asyncMap(nWorkers: nWorkers, delay: delay) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
@@ -100,7 +108,8 @@ public struct OpenKeTester: Tester {
                        seed: seed,
                        cvSplitIndex: cvSplitIndex,
                        workerIndex: workerIndex,
-                       hparams: hparams
+                       hparams: hparams,
+                       usingValidationSubset: usingValidationSubset
                     ) 
                 }
             } else {
@@ -109,7 +118,8 @@ public struct OpenKeTester: Tester {
                        seed: seed,
                        cvSplitIndex: cvSplitIndex,
                        workerIndex: 0,
-                       hparams: hparams
+                       hparams: hparams,
+                       usingValidationSubset: usingValidationSubset
                     ) 
                 }
             }

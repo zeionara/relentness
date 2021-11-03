@@ -47,6 +47,9 @@ public struct CompareModels: ParsableCommand {
     @Option(name: .long, help: "Delay to wait for before running consecutive tests (in seconds)")
     var delay: Double?
 
+    @Option(name: .long, help: "Delay to wait before killing a running model testing process and trying again (in seconds)")
+    var terminationDelay: Double?
+
     public static var configuration = CommandConfiguration(
         commandName: "compare-models",
         abstract: "Compare knowledge graph embedding models by selecting optimal set of hyperparams and performing validation"
@@ -72,7 +75,9 @@ public struct CompareModels: ParsableCommand {
 
         let path_ = path
         let delay_ = delay
+        let terminationDelay_ = terminationDelay
 
+        var hparams = [Model: HyperParamSet]()
 
         for model in MODELS_FOR_COMPARISON {
             logger.info("Testing model \(model)...")
@@ -85,14 +90,15 @@ public struct CompareModels: ParsableCommand {
                 for hparams in sets.storage.sets {
                     do {
                         let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
-                            try await OpenKeTester(
+                            try await OpenKeTester( // TODO: Create the instance once and then reuse it
                                 model: model.asOpenKeModel,
                                 env: env_,
                                 corpus: corpus_,
                                 nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
                                 remove: remove_,
                                 gpu: gpu_,
-                                differentGpus: differentGpus_
+                                differentGpus: differentGpus_,
+                                terminationDelay: terminationDelay_
                             ).run(
                                 seeds: seeds_.count > 0 ? seeds_ : nil,
                                 delay: delay_,
@@ -117,6 +123,48 @@ public struct CompareModels: ParsableCommand {
                 logger.info("\(String(describing: HyperParamSet.header))")
                 logger.info("\(String(describing: bestHparams))")
                 logger.info("")
+
+                hparams[model] = bestHparams
+            }
+        }
+
+        logger.info("Results of models validation: ")
+        logger.info("model\t\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
+        let sortedModels = MODELS_FOR_COMPARISON.sorted {
+            $0.index < $1.index
+        }
+        // var collectedModelValidationResults = [Model: ModelTestingResult]()
+        for model in sortedModels {
+            // logger.info("Validating model \(model)...")
+            let modelHparams = hparams[model]!
+            BlockingTask {
+                do {
+                    let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [OpenKeTester.Metrics] in
+                        try await OpenKeTester(
+                            model: model.asOpenKeModel,
+                            env: env_,
+                            corpus: corpus_,
+                            nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                            remove: remove_,
+                            gpu: gpu_,
+                            differentGpus: differentGpus_,
+                            terminationDelay: terminationDelay_
+                        ).runSingleTest(
+                           seeds: seeds_.count > 0 ? seeds_ : nil,
+                           delay: delay_,
+                           cvSplitIndex: 0,
+                           hparams: modelHparams,
+                           usingValidationSubset: true
+                        )
+                    }
+
+                    let meanMetrics = metrics.mean.mean.mean
+                    
+                    logger.info("\(model)\t\(modelHparams)\t\(meanMetrics.descriptionWithExecutionTime(executionTime))")
+                    // collectedModelTestingResults[model] = (meanMetrics: meanMetrics, hparams: modelHparams, executionTime: executionTime)
+                } catch {
+                    print("Unexpected error \(error), cannot complete testing")
+                }
             }
         }
     }
