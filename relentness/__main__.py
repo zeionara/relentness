@@ -37,7 +37,7 @@ class Foo(Model):
 @click.option('--output', '-o', type=str, default=None)
 @click.option('--images', '-i', type=str, default=None)
 @click.option('--seed', '-s', type=int, default=None)
-@click.option('--n-epochs', '-e', type=int, default=1000)
+@click.option('--n-epochs', '-e', type=int, default=100)
 @click.option('--n-batches', '-b', type=int, default=2)
 @click.option('--margin', '-ma', type=float, default=5.0)
 @click.option('--alpha', '-a', type=float, default=0.1)
@@ -46,8 +46,9 @@ class Foo(Model):
 @click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
 @click.option('--remove', '-r', type=bool, is_flag=True)
+@click.option('--validate', '-val', type=bool, is_flag=True)
 def test(path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0,
-         alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False):
+         alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False, validate: bool = False):
     if not tsv:
         print(f'Got input path "{path}"')
 
@@ -90,7 +91,10 @@ def test(path: str, model: str, output: str = None, images: str = None, verbose:
     try:
         config.run()
 
-        config.test(verbose=verbose, as_tsv=tsv)
+        if validate:
+            config.validate(verbose=verbose, as_tsv=tsv)
+        else:
+            config.test(verbose=verbose, as_tsv=tsv)
     finally:
         if remove:
             rmtree(output_path)
