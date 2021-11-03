@@ -23,13 +23,17 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
 
     try task.run()
 
+    if let unwrappedErrorData = try? inputPipe.fileHandleForReading.readToEnd() {
+        print(
+            String(decoding: unwrappedErrorData, as: UTF8.self)
+        )
+    }
     let outputData = try? outputPipe.fileHandleForReading.readToEnd()
-    let errorData = try? inputPipe.fileHandleForReading.readToEnd()
 
     task.waitUntilExit()
 
     let output = String(decoding: outputData!, as: UTF8.self)
-    let _ = errorData == nil ? nil : String(decoding: errorData!, as: UTF8.self)
+    // let _ = errorData == nil ? nil : String(decoding: errorData!, as: UTF8.self)
 
     return dropNewLine ? String(output.dropLast()) : String(output)
 }

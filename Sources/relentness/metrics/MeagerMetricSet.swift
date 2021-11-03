@@ -100,6 +100,10 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
     public static var headerWithExecutionTime: String {
         "\(header)\texecution-time"
     }
+
+    public func weightedSum(executionTime: Double? = nil) -> Double {
+       0.9 * hitsAtTen + 0.09 * hitsAtThree + 0.01 * hitsAtOne
+    } 
 }
 
 public extension MeagerMetricSeries {
