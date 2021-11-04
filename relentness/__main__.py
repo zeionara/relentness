@@ -1,8 +1,11 @@
+import os
+import random
 from os import makedirs
 from shutil import rmtree
 from uuid import uuid4
 
 import click
+import numpy as np
 import tensorflow as tf
 from keras.models import Model
 
@@ -37,8 +40,8 @@ class Foo(Model):
 @click.option('--output', '-o', type=str, default=None)
 @click.option('--images', '-i', type=str, default=None)
 @click.option('--seed', '-s', type=int, default=None)
-@click.option('--n-epochs', '-e', type=int, default=1000)
-@click.option('--n-batches', '-b', type=int, default=2)
+@click.option('--n-epochs', '-e', type=int, default=100)
+@click.option('--n-batches', '-b', type=int, default=3)
 @click.option('--margin', '-ma', type=float, default=5.0)
 @click.option('--alpha', '-a', type=float, default=0.1)
 @click.option('--dimension', '-d', type=int, default=10)
@@ -46,13 +49,25 @@ class Foo(Model):
 @click.option('--tsv', '-t', type=bool, is_flag=True)
 @click.option('--verbose', '-v', type=bool, is_flag=True)
 @click.option('--remove', '-r', type=bool, is_flag=True)
+@click.option('--validate', '-val', type=bool, is_flag=True)
 def test(path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0,
-         alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False):
+         alpha: float = 0.1, dimension: int = 10, neg_rate: int = 2, tsv: bool = False, remove: bool = False, validate: bool = False):
     if not tsv:
         print(f'Got input path "{path}"')
 
     if seed is not None:
+        os.environ['PYTHONHASHSEED'] = str(seed)
         tf.random.set_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+
+        tf.config.threading.set_inter_op_parallelism_threads(1)
+        tf.config.threading.set_intra_op_parallelism_threads(1)
+
+        os.environ['TF_DETERMINISTIC_OPS'] = '1'
+        os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+
+        # patch()
 
     # mean = Foo().compute_mean(2.0, 5.0)
     # print('foo')
@@ -90,7 +105,12 @@ def test(path: str, model: str, output: str = None, images: str = None, verbose:
     try:
         config.run()
 
-        config.test(verbose=verbose, as_tsv=tsv)
+        # print(config.trainModel.entity_embeddings)
+
+        if validate:
+            config.validate(verbose=verbose, as_tsv=tsv)
+        else:
+            config.test(verbose=verbose, as_tsv=tsv)
     finally:
         if remove:
             rmtree(output_path)

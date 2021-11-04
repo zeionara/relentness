@@ -13,7 +13,16 @@ enum Model: String, CaseIterable, ExpressibleByArgument {
             case .complex:
                 return .complex
         }
-    }        
+    }
+
+    public var index: Int {
+       switch self {
+           case .transe:
+              return 0
+           case .complex:  
+              return 1
+       }
+    }
 }
 
 public struct Test: ParsableCommand {

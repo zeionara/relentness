@@ -4,7 +4,4 @@ nEpochs:
 nBatches:
   - 2
   - 3
-entityNegativeRate:
-  - 1
-  - 3
 
