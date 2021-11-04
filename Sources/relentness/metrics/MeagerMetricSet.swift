@@ -304,21 +304,35 @@ public struct MeagerMetricSet: MetricSet, CustomStringConvertible, Sendable {
 
 public extension Array where Element == MeagerMetricSet {
     var mean: MeagerMetricSet {
-        MeagerMetricSet(
-            (0..<self.count).map{ i in
+        // print("Averaging array with meager metric sets which contains \(self.count) elements (presumably each of which corresponds to a seed)")
+        assert(self.count > 0)
+        assert(self.dropFirst().allSatisfy{ $0.subsets.count == self.first!.subsets.count })
+
+        let result = MeagerMetricSet(
+            (0..<self.first!.subsets.count).map{ i in // The loop returns an array in which number of elements must be equal to number of subsets in each of base objects
                 self.map{ metricSet in
                     metricSet.subsets[i]
                 }.meanWithAccumulatingTime
             }
         )
+
+        assert(result.subsets.count == self.first!.subsets.count)
+        return result
     }
 }
 
 public func mean(sets: [[MeagerMetricSet]]) -> [MeagerMetricSet] {
-    (0..<sets.count).map{ i in
-        sets.map{ metricSetList in
+    // print("Averaging array with meager metric sets which contains \(sets.count) elements (presumably each of which corresponds to a cv split)")
+    assert(sets.count > 0)
+    assert(sets.dropFirst().allSatisfy{ $0.count == sets.first!.count })
+
+    let result = (0..<sets.first!.count).map{ i in // The method returns an array in which number of elements must be equal to the number of provided seeds
+        return sets.map{ metricSetList in
             metricSetList[i]
         }.mean
     }
+
+    assert(result.count == sets.first!.count)
+    return result
 }
 
