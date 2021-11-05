@@ -20,21 +20,76 @@ public extension Optional where Wrapped == Double {
     }
 }
 
+public extension Optional where Wrapped == String {
+    var asStringifiedHyperparameter: String {
+        if let unwrapped = self {
+            return unwrapped
+        }
+        return "-"
+    }
+}
+
+public extension Optional where Wrapped == Bool {
+    var asStringifiedHyperparameter: String {
+        if let unwrapped = self {
+            return unwrapped ? "true" : "false"
+        }
+        return "-"
+    }
+}
+
+public enum Optimizer: String, CaseIterable, Sendable, Codable {
+    case adagrad
+    case adadelta
+    case adam
+    case sgd
+}
+
+public enum EvaluationTask: String, CaseIterable, Sendable, Codable {
+    case linkPrediction = "link-prediction"
+    case tripleClassification = "triple-classification"
+
+    // public var kebabCased: String {
+    //     switch self {
+    //         case .linkPrediction:
+    //             return "link-prediction"
+    //         case .tripleClassification:
+    //             return "triple-classification"
+    //     }
+    // }
+}
+
 public struct HyperParamSet: CustomStringConvertible, Sendable {
     public let nEpochs: Int?
     public let nBatches: Int?
     public let alpha: Double?
     public let margin: Double?
-    public let dimension: Int?
+    public let hiddenSize: Int?
     public let entityNegativeRate: Int?
 
+    public let relationNegativeRate: Int?
+    public let lambda: Double?
+    public let optimizer: Optimizer?
+    public let task: EvaluationTask?
+    public let bern: Bool?
+    public let relationDimension: Double?
+    public let entityDimension: Double?
+    public let patience: Int?
+    public let minDelta: Double?
+    public let nWorkers: Int?
+    public let importPath: String?
+
     public static var header: String {
-        "n-epochs\tn-batches\talpha\tmargin\tdimension\tentity-neg-rate"
+        "n-epochs\tn-batches\talpha\tmargin\tdimension\tentity-neg-rate\trelation-neg-rate\tlambda\toptimizer\ttask\tbern\trelation-dim\tentity-dim\tpatience\tmin-delta\tn-workers\timport-path"
     }
 
     public var description: String {
         "\(nEpochs.asStringifiedHyperparameter)\t\(nBatches.asStringifiedHyperparameter)\t\(alpha.asStringifiedHyperparameter)\t\(margin.asStringifiedHyperparameter)\t" +
-        "\(dimension.asStringifiedHyperparameter)\t\(entityNegativeRate.asStringifiedHyperparameter)"
+        "\(hiddenSize.asStringifiedHyperparameter)\t\(entityNegativeRate.asStringifiedHyperparameter)\t" +
+        "\(relationNegativeRate.asStringifiedHyperparameter)\t\(lambda.asStringifiedHyperparameter)\t\((optimizer?.rawValue).asStringifiedHyperparameter)\t" + 
+        "\((task?.rawValue).asStringifiedHyperparameter)\t\(bern.asStringifiedHyperparameter)\t" +
+        "\(relationDimension.asStringifiedHyperparameter)\t\(entityDimension.asStringifiedHyperparameter)\t\(patience.asStringifiedHyperparameter)\t\(minDelta.asStringifiedHyperparameter)\t" +
+        "\(nWorkers.asStringifiedHyperparameter)\t\(importPath.asStringifiedHyperparameter)"
     }
 }
 
@@ -62,14 +117,70 @@ public extension HyperParamSet {
             args.append(margin.asStringifiedHyperparameter)
         }
 
-        if let _ = dimension {
-            args.append("-d")
-            args.append(dimension.asStringifiedHyperparameter)
+        if let _ = hiddenSize {
+            args.append("-hs")
+            args.append(hiddenSize.asStringifiedHyperparameter)
         }
 
         if let _ = entityNegativeRate {
-            args.append("-n")
+            args.append("-en")
             args.append(entityNegativeRate.asStringifiedHyperparameter)
+        }
+
+        if let _ = relationNegativeRate {
+            args.append("-rn")
+            args.append(entityNegativeRate.asStringifiedHyperparameter)
+        }
+
+        if let _ = lambda {
+            args.append("-l")
+            args.append(lambda.asStringifiedHyperparameter)
+        }
+
+        if let _ = optimizer {
+            args.append("-opt")
+            args.append((optimizer?.rawValue).asStringifiedHyperparameter)
+        }
+
+        if let _ = task {
+            args.append("-tsk")
+            args.append((task?.rawValue).asStringifiedHyperparameter)
+        }
+
+        if let unwrappedBern = bern {
+            if unwrappedBern { 
+                args.append("-brn")
+            }
+        }
+
+        if let _ = relationDimension {
+            args.append("-rd")
+            args.append(relationDimension.asStringifiedHyperparameter)
+        }
+
+        if let _ = entityDimension {
+            args.append("-ed")
+            args.append(entityDimension.asStringifiedHyperparameter)
+        }
+
+        if let _ = patience {
+            args.append("-p")
+            args.append(patience.asStringifiedHyperparameter)
+        }
+
+        if let _ = minDelta {
+            args.append("-md")
+            args.append(minDelta.asStringifiedHyperparameter)
+        }
+
+        if let _ = nWorkers {
+            args.append("-nw")
+            args.append(nWorkers.asStringifiedHyperparameter)
+        }
+
+        if let _ = importPath {
+            args.append("-ip")
+            args.append(importPath.asStringifiedHyperparameter)
         }
 
         return args
@@ -92,8 +203,20 @@ public struct HyperParamStorage: Codable {
     public let nBatches: [Int]?
     public let alpha: [Double]?
     public let margin: [Double]?
-    public let dimension: [Int]?
+    public let hiddenSize: [Int]?
     public let entityNegativeRate: [Int]?
+
+    public let relationNegativeRate: [Int]?
+    public let lambda: [Double]?
+    public let optimizer: [Optimizer]?
+    public let task: [EvaluationTask]?
+    public let bern: [Bool]?
+    public let relationDimension: [Double]?
+    public let entityDimension: [Double]?
+    public let patience: [Int]?
+    public let minDelta: [Double]?
+    public let nWorkers: [Int]?
+    public let importPath: [String]?
 
     public var sets: [HyperParamSet] {
         var result = [HyperParamSet]()
@@ -102,18 +225,51 @@ public struct HyperParamStorage: Codable {
             for nBatches_ in nBatches.values {
                 for alpha_ in alpha.values {
                     for margin_ in margin.values {
-                        for dimension_ in dimension.values {
+                        for hiddenSize_ in hiddenSize.values {
                             for entityNegativeRate_ in entityNegativeRate.values {
-                                result.append(
-                                    HyperParamSet(
-                                        nEpochs: nEpochs_,
-                                        nBatches: nBatches_,
-                                        alpha: alpha_,
-                                        margin: margin_,
-                                        dimension: dimension_,
-                                        entityNegativeRate: entityNegativeRate_
-                                    )
-                                )
+                                for relationNegativeRate_ in relationNegativeRate.values {
+                                    for lambda_ in lambda.values {
+                                        for optimizer_ in optimizer.values {
+                                            for task_ in task.values {
+                                                for bern_ in bern.values {
+                                                    for relationDimension_ in relationDimension.values {
+                                                        for entityDimension_ in entityDimension.values {
+                                                            for patience_ in patience.values {
+                                                                for minDelta_ in minDelta.values {
+                                                                    for nWorkers_ in nWorkers.values {
+                                                                        for importPath_ in importPath.values {
+                                                                            result.append(
+                                                                                HyperParamSet(
+                                                                                    nEpochs: nEpochs_,
+                                                                                    nBatches: nBatches_,
+                                                                                    alpha: alpha_,
+                                                                                    margin: margin_,
+                                                                                    hiddenSize: hiddenSize_,
+                                                                                    entityNegativeRate: entityNegativeRate_,
+                                                                                    relationNegativeRate: relationNegativeRate_,
+                                                                                    lambda: lambda_,
+                                                                                    optimizer: optimizer_,
+                                                                                    task: task_,
+                                                                                    bern: bern_,
+                                                                                    relationDimension: relationDimension_,
+                                                                                    entityDimension: entityDimension_,
+                                                                                    patience: patience_,
+                                                                                    minDelta: minDelta_,
+                                                                                    nWorkers: nWorkers_,
+                                                                                    importPath: importPath_ 
+                                                                                )
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
