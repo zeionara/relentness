@@ -16,6 +16,9 @@ public struct EvaluateDataset: ParsableCommand {
     @Option(name: .shortAndLong, help: "Name of log file")
     var logFileName: String?
 
+    @Option(name: .shortAndLong, help: "Name of file with patten definitions")
+    var patternsPath: String
+
     @Flag(name: .long, help: "Include triples from the test batch into the evaluation process")
     var testSubset = false
 
@@ -32,8 +35,7 @@ public struct EvaluateDataset: ParsableCommand {
     mutating public func run() {
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
-
-        // let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        let logger = Logger(level: verbose ? .trace : .info, label: "main")
         
         if let unwrappedCorpus = corpus {
             var batches = ["train2id"]
@@ -58,6 +60,9 @@ public struct EvaluateDataset: ParsableCommand {
 
             // print("Updated \(response.nModifiedTriples) in \(response.executionTimeInMilliseconds) ms")
         }
+
+        let patterns = Patterns(patternsPath)
+
 
         BlockingTask {
             let countSymmetricPairs = CountingQuery(
@@ -85,6 +90,19 @@ public struct EvaluateDataset: ParsableCommand {
             let nTotalTriples = nSymmetricTriples + nAsymmetricTriples
 
             print("\(String(format: "%.3f", Double(nSymmetricTriples) / Double(nTotalTriples))) portion of triples are symmetrical") 
+
+            print("Handling patterns...")
+
+            logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
+            for pattern in patterns.storage.elements {
+                switch pattern.name {
+                    case "symmetric":
+                        let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("symmetric\t\(stats)")
+                    case let patternName:
+                        print("Unsupported pattern \(patternName)") 
+                }
+            }
             // print("There are \(try! await adapter.sample(countSymmetricPairs).count) symmetric relation pair instances in the knowledge base")
         }
     }

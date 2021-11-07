@@ -1,0 +1,18 @@
+items:
+  - name: symmetric
+    positive: |-
+      select (count(?h) as ?count) (?r as ?relation) where {
+        ?h ?r ?t.
+        ?t ?r ?h.
+        filter(str(?h) > str(?t))
+      }
+      group by ?r
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) (?r as ?relation) where {
+        ?h ?r ?t.
+        filter ( !exists { ?t ?r ?h } )
+      }
+      group by ?r
+      order by desc(?count)
+

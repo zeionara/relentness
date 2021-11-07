@@ -3,7 +3,7 @@ import ArgumentParser
 import Logging
 import wickedData
 
-public struct Sample: ParsableCommand {
+public struct GenerateSample: ParsableCommand {
     @Option(name: .shortAndLong, help: "Fraction of target triples which are going to the train subset")
     var trainSize = 0.5
 
