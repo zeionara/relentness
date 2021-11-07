@@ -25,8 +25,8 @@ public extension TriplesBatch {
 }
 
 public extension OpenKEImporter {
-    var asTtl: String {
-        var rows = ["@prefix \(PREFIX): <https://relentness.nara.zeio/\(path)/> .", ""]
+    func generateTtlRows() -> [String] {
+        var rows = [String]()
 
         let joinedBatch = batches.reduce(
             TriplesBatch(
@@ -53,7 +53,23 @@ public extension OpenKEImporter {
             rows.append("\(headTerm) \(relationsAndTails) .")
         }
 
-        return rows.joined(separator: "\n")
+        return rows
+    }
+
+    var asTtl: String {
+        (
+            ["@prefix \(PREFIX): <https://relentness.nara.zeio/\(path)/> .", ""] +
+            generateTtlRows()
+        ).joined(separator: "\n")
+    }
+
+    func asTtls(batchSize: Int) -> [String] {
+        let header = ["@prefix \(PREFIX): <https://relentness.nara.zeio/\(path)/> .", ""]
+        let rows = generateTtlRows()
+
+        return rows.groups(nElementsPerChunk: min(batchSize, rows.count)).map{ group in
+            (header + group).joined(separator: "\n")
+        }
     }
 
     func toTtl(_ path: String? = nil) {

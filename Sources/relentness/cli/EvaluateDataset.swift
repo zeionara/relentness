@@ -19,6 +19,9 @@ public struct EvaluateDataset: ParsableCommand {
     @Option(name: .shortAndLong, help: "Name of file with patten definitions")
     var patternsPath: String
 
+    @Option(name: .shortAndLong, help: "Number of statements per query for updating the knowledge base")
+    var batchSize: Int?
+
     @Flag(name: .long, help: "Include triples from the test batch into the evaluation process")
     var testSubset = false
 
@@ -48,14 +51,36 @@ public struct EvaluateDataset: ParsableCommand {
                 batches.append("valid2id")
             }
 
+            let batchSize_ = batchSize
+
+            // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
             BlockingTask {
-                print(
-                    try! await BlazegraphAdapter().update(
-                        UpdateQuery(
-                            text: OpenKEImporter(unwrappedCorpus, batches: batches).asTtl
+                // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
+                if let unwrappedBatchSize = batchSize_ {
+                    let ttls = OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: unwrappedBatchSize)
+                    print("Generated \(ttls.count) batches for updating the knowledge base")
+                    for i in 0..<ttls.count {
+                        print("Inserting \(i + 1) batch...")
+                        print(
+                            try! await BlazegraphAdapter(address: "10.10.0.46").update( 
+                                UpdateQuery(
+                                    text: ttls[i]
+                                ) // ,
+                                // timeout: 3_600_000
+                            )
+                        )
+                    }
+                    print("Finished knowledge base update")
+                } else {
+                    print(
+                        try! await BlazegraphAdapter(address: "10.10.0.46").update(
+                            UpdateQuery(
+                                text: OpenKEImporter(unwrappedCorpus, batches: batches).asTtl
+                            ),
+                            timeout: 3_600_000
                         )
                     )
-                )
+                }
             }
 
             // print("Updated \(response.nModifiedTriples) in \(response.executionTimeInMilliseconds) ms")
@@ -65,33 +90,33 @@ public struct EvaluateDataset: ParsableCommand {
 
 
         BlockingTask {
-            let countSymmetricPairs = CountingQuery(
-                text: """
-                select (count(?h) as ?count) where {
-                  ?h ?r ?t.
-                  ?t ?r ?h
-                }
-                """
-            )
+            // let countSymmetricPairs = CountingQuery(
+            //     text: """
+            //     select (count(?h) as ?count) where {
+            //       ?h ?r ?t.
+            //       ?t ?r ?h
+            //     }
+            //     """
+            // )
 
-            let countAsymmetricTriples = CountingQuery(
-                text: """
-                select (count(?h) as ?count) where {
-                  ?h ?r ?t.
-                  filter ( !exists { ?t ?r ?h } )
-                }
-                """
-            )
+            // let countAsymmetricTriples = CountingQuery(
+            //     text: """
+            //     select (count(?h) as ?count) where {
+            //       ?h ?r ?t.
+            //       filter ( !exists { ?t ?r ?h } )
+            //     }
+            //     """
+            // )
 
-            let adapter = BlazegraphAdapter()
+            let adapter = BlazegraphAdapter(address: "10.10.0.46")
 
-            let nSymmetricTriples = try! await adapter.sample(countSymmetricPairs).count
-            let nAsymmetricTriples = try! await adapter.sample(countAsymmetricTriples).count
-            let nTotalTriples = nSymmetricTriples + nAsymmetricTriples
+            // let nSymmetricTriples = try! await adapter.sample(countSymmetricPairs).count
+            // let nAsymmetricTriples = try! await adapter.sample(countAsymmetricTriples).count
+            // let nTotalTriples = nSymmetricTriples + nAsymmetricTriples
 
-            print("\(String(format: "%.3f", Double(nSymmetricTriples) / Double(nTotalTriples))) portion of triples are symmetrical") 
+            // print("\(String(format: "%.3f", Double(nSymmetricTriples) / Double(nTotalTriples))) portion of triples are symmetrical") 
 
-            print("Handling patterns...")
+            // print("Handling patterns...")
 
             logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
             for pattern in patterns.storage.elements {
