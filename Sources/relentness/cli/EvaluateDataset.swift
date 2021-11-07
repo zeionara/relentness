@@ -99,6 +99,9 @@ public struct EvaluateDataset: ParsableCommand {
                     case "symmetric":
                         let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
                         logger.info("symmetric\t\(stats)")
+                    case "antisymmetric":
+                        let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("antisymmetric\t\(stats)")
                     case let patternName:
                         print("Unsupported pattern \(patternName)") 
                 }

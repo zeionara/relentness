@@ -15,4 +15,24 @@ items:
       }
       group by ?r
       order by desc(?count)
+  - name: antisymmetric
+    positive: |-
+      select (count(?h) as ?count) ?forward ?backward where {                                                                                                                                             
+        ?h ?forward ?t.                                                                                                                                                                                        
+        ?t ?backward ?h.                                                                                                                                                                                        
+        filter(str(?forward) > str(?backward))
+        filter(str(?h) > str(?t))
+      }                                                                                                                                                                                                  
+      group by ?forward ?backward                                                                                                                                                                                        
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?forward ?backward where {
+        ?h ?forward ?t.
+        filter( !exists{
+          ?t ?backward ?h.
+          filter(str(?backward) != str(?forward))
+        }).
+      }
+      group by ?forward ?backward
+      order by desc(?count)
 

@@ -69,17 +69,22 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
     let negativeSample: Sample<BindingType>
     let totalSample: Sample<CountingQuery.BindingType>
     let threshold: Double = 0.5
+    let nDecimalPlaces: Int = 3
+
+    private func stringifyDouble(_ value: Double) -> String {
+        String(format: "%.\(nDecimalPlaces)f", value)
+    }
     
     public var description: String {
         let positiveCount = positiveSample.count(threshold)
         let negativeCount = negativeSample.count(threshold)
         let totalCount = totalSample.count
 
-        let positiveRatio = Double(positiveCount) / Double(totalCount)
-        let negativeRatio = Double(negativeCount) / Double(totalCount)
-        let relativeRatio = Double(positiveCount) / Double(negativeCount)
+        let positiveRatio = totalCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(totalCount))
+        let negativeRatio = totalCount == 0 ? "-" : stringifyDouble(Double(negativeCount) / Double(totalCount))
+        let relativeRatio = negativeCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(negativeCount))
 
-        return "\(String(format: "%.3f", positiveRatio))\t\(String(format: "%.3f", negativeRatio))\t\(String(format: "%.3f", relativeRatio))\t\(positiveCount)\t\(negativeCount)\t\(totalCount)"
+        return "\(positiveRatio)\t\(negativeRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)"
     }
 
     public static var header: String {
