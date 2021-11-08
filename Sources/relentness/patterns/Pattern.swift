@@ -41,7 +41,8 @@ public struct Pattern: Codable {
 
     public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
-            getNegativeQuery()
+            getNegativeQuery(),
+            timeout: 3_600_000
         )
     }
 
@@ -79,16 +80,20 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
         let positiveCount = positiveSample.count(threshold)
         let negativeCount = negativeSample.count(threshold)
         let totalCount = totalSample.count
+        let normalizingCount = positiveCount + negativeCount
 
         let positiveRatio = totalCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(totalCount))
         let negativeRatio = totalCount == 0 ? "-" : stringifyDouble(Double(negativeCount) / Double(totalCount))
         let relativeRatio = negativeCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(negativeCount))
 
-        return "\(positiveRatio)\t\(negativeRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)"
+        let positiveNormalizedRatio = normalizingCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(normalizingCount))
+        let negativeNormalizedRatio = normalizingCount == 0 ? "-" : stringifyDouble(Double(negativeCount) / Double(normalizingCount))
+
+        return "\(positiveRatio)\t\(negativeRatio)\t\(positiveNormalizedRatio)\t\(negativeNormalizedRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)"
     }
 
     public static var header: String {
-        "positive-ratio\tnegative-ratio\trelative-ratio\tn-positive-occurrences\tn-negative-occurrences\tn-triples"
+        "positive-ratio\tnegative-ratio\tpositive-normalized-ratio\tnegative-normalized-ratio\trelative-ratio\tn-positive-occurrences\tn-negative-occurrences\tn-triples"
     }
 }
 

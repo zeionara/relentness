@@ -62,7 +62,7 @@ public struct EvaluateDataset: ParsableCommand {
                     for i in 0..<ttls.count {
                         print("Inserting \(i + 1) batch...")
                         print(
-                            try! await BlazegraphAdapter(address: "10.10.0.46").update( 
+                            try! await BlazegraphAdapter(address: "25.109.46.115").update( 
                                 UpdateQuery(
                                     text: ttls[i]
                                 ) // ,
@@ -73,7 +73,7 @@ public struct EvaluateDataset: ParsableCommand {
                     print("Finished knowledge base update")
                 } else {
                     print(
-                        try! await BlazegraphAdapter(address: "10.10.0.46").update(
+                        try! await BlazegraphAdapter(address: "25.109.46.115").update(
                             UpdateQuery(
                                 text: OpenKEImporter(unwrappedCorpus, batches: batches).asTtl
                             ),
@@ -108,7 +108,7 @@ public struct EvaluateDataset: ParsableCommand {
             //     """
             // )
 
-            let adapter = BlazegraphAdapter(address: "10.10.0.46")
+            let adapter = BlazegraphAdapter(address: "25.109.46.115")
 
             // let nSymmetricTriples = try! await adapter.sample(countSymmetricPairs).count
             // let nAsymmetricTriples = try! await adapter.sample(countAsymmetricTriples).count
@@ -127,6 +127,21 @@ public struct EvaluateDataset: ParsableCommand {
                     case "antisymmetric":
                         let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter) 
                         logger.info("antisymmetric\t\(stats)")
+                    case "equivalence":
+                        let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("equivalence\t\(stats)")
+                    case "implication":
+                        let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("implication\t\(stats)")
+                    case "reflexive":
+                        let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("reflexive\t\(stats)")
+                    case "transitive":
+                        let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("transitive\t\(stats)")
+                    case "composition":
+                        let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                        logger.info("composition\t\(stats)")
                     case let patternName:
                         print("Unsupported pattern \(patternName)") 
                 }
