@@ -197,4 +197,35 @@ items:
   #     }
   #     group by ?premise ?statement ?conclusion
   #     order by desc(?count)
-
+  #   - OR -
+  #   select (count(?h) as ?count) ?premise ?statement ?conclusion {
+  #     {
+  #       select (count(?h_) as ?count_) ?premise where {
+  #         ?h_ ?premise ?t_
+  #       }
+  #       group by ?premise
+  #       order by desc(?count_)
+  #       limit 3
+  #     }
+  #     {
+  #       select (count(?h_) as ?count__) ?statement where {
+  #         ?h_ ?statement ?t_
+  #       }
+  #       group by ?statement
+  #       order by desc(?count__)
+  #       limit 3
+  #     }
+  #     {
+  #       select (count(?h_) as ?count___) ?conclusion where {
+  #         ?h_ ?conclusion ?t_
+  #       }
+  #       group by ?conclusion
+  #       order by desc(?count___)
+  #       limit 3
+  #     }
+  #     ?h ?premise ?t.
+  #     ?t ?statement ?n.
+  #     filter(!exists{?h ?conclusion ?n})
+  #   }
+  #   group by ?premise ?statement ?conclusion
+  #   order by desc(?count)
