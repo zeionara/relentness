@@ -36,43 +36,43 @@ class Foo(Model):
 
 # @click.option('--neg-rate', '-n', type=int, default=2)
 @main.command()
-@click.argument('path', type=str)
-@click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)
-@click.option('--output', '-o', type=str, default=None)
+@click.argument('path', type=str)  #
+@click.option('--model', '-m', type=click.Choice(['transe', 'complex']), required=True)  #
+@click.option('--output', '-o', type=str, default=None)  #
 @click.option('--images', '-i', type=str, default=None)
-@click.option('--seed', '-s', type=int, default=None)
-@click.option('--tsv', '-t', type=bool, is_flag=True)
-@click.option('--verbose', '-v', type=bool, is_flag=True)
-@click.option('--remove', '-r', type=bool, is_flag=True)
-@click.option('--validate', '-val', type=bool, is_flag=True)
-@click.option('--n-epochs', '-e', type=int, default=100)
-@click.option('--n-batches', '-b', type=int, default=3)
-@click.option('--margin', '-ma', type=float, default=5.0)
-@click.option('--alpha', '-a', type=float, default=0.1)
-@click.option('--hidden-size', '-hs', type=int, default=10)
-@click.option('--lmbda', '-l', type=float, default=0.0)
-@click.option('--optimizer', '-opt', type=click.Choice(["adagrad", "adadelta", "adam", "sgd"]), default="sgd")
-@click.option('--task', '-tsk', type=click.Choice(["link-prediction", "triple-classification"]), default="link-prediction")
-@click.option('--bern', '-brn', type=bool, is_flag=True)
-@click.option('--relation-dimension', '-rd', type=int, default=None)
-@click.option('--entity-dimension', '-ed', type=int, default=None)
-@click.option('--patience', '-p', type=int, default=None)
-@click.option('--min-delta', '-md', type=float, default=None)
-@click.option('--relation-neg-rate', '-rn', type=int, default=0)
-@click.option('--entity-neg-rate', '-en', type=int, default=1)
-@click.option('--n-workers', '-nw', type=int, default=8)
-@click.option('--n-export-steps', '-nes', type=int, default=0)
-@click.option('--import-path', '-ip', type=str, default=None)
-@click.option('--export-path', '-ep', type=str, default=None)
+@click.option('--seed', '-s', type=int, default=None)  #
+@click.option('--as-tsv', '-t', type=bool, is_flag=True)  #
+@click.option('--verbose', '-v', type=bool, is_flag=True)  #
+@click.option('--remove', '-r', type=bool, is_flag=True)  #
+@click.option('--validate', '-val', type=bool, is_flag=True)  #
+@click.option('--n-epochs', '-e', type=int, default=100)  #
+@click.option('--n-batches', '-b', type=int, default=3)  #
+@click.option('--margin', '-ma', type=float, default=5.0)  #
+@click.option('--alpha', '-a', type=float, default=0.1)  #
+@click.option('--hidden-size', '-hs', type=int, default=10)  #
+@click.option('--lmbda', '-l', type=float, default=0.0)  #
+@click.option('--optimizer', '-opt', type=click.Choice(["adagrad", "adadelta", "adam", "sgd"]), default="sgd")  #
+@click.option('--task', '-tsk', type=click.Choice(["link-prediction", "triple-classification"]), default="link-prediction")  #
+@click.option('--bern', '-brn', type=bool, is_flag=True)  #
+@click.option('--relation-dimension', '-rd', type=int, default=None)  #
+@click.option('--entity-dimension', '-ed', type=int, default=None)  #
+@click.option('--patience', '-p', type=int, default=None)  #
+@click.option('--min-delta', '-md', type=float, default=None)  #
+@click.option('--relation-neg-rate', '-rn', type=int, default=0)  #
+@click.option('--entity-neg-rate', '-en', type=int, default=1)  #
+@click.option('--n-workers', '-nw', type=int, default=8)  #
+@click.option('--n-export-steps', '-nes', type=int, default=0)  #
+@click.option('--import-path', '-ip', type=str, default=None)  #
+@click.option('--export-path', '-ep', type=str, default=None)  #
 @click.option('--visualize', '-vis', type=bool, is_flag=True)
 def test(
     path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0,
-    alpha: float = 0.1, hidden_size: int = 10, tsv: bool = False, remove: bool = False, validate: bool = False,  # neg_rate: int = 2,
+    alpha: float = 0.1, hidden_size: int = 10, as_tsv: bool = False, remove: bool = False, validate: bool = False,  # neg_rate: int = 2,
     lmbda: float = 0.0, optimizer: str = "sgd", task: str = 'link-prediction', bern: bool = False, relation_dimension: int = None, entity_dimension: int = None, patience: int = None,
     min_delta: float = None, relation_neg_rate: int = 0, entity_neg_rate: int = 1, n_workers: int = 8, n_export_steps: int = 0, import_path: str = None, export_path: str = None,
     visualize: bool = False
 ):
-    if not tsv:
+    if not as_tsv:
         print(f'Got input path "{path}"')
 
     if seed is not None:
@@ -132,7 +132,7 @@ def test(
     else:
         raise NotImplementedError("Triple classification task is not supported yet")
 
-    config.init(as_tsv=tsv, verbose=verbose)
+    config.init(as_tsv=as_tsv, verbose=verbose)
 
     # environ['CUDA_VISIBLE_DEVICES']='7'
     config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
@@ -143,9 +143,9 @@ def test(
         # print(config.trainModel.entity_embeddings)
 
         if validate:
-            config.validate(verbose=verbose, as_tsv=tsv)
+            config.validate(verbose=verbose, as_tsv=as_tsv)
         else:
-            config.test(verbose=verbose, as_tsv=tsv)
+            config.test(verbose=verbose, as_tsv=as_tsv)
     finally:
         if remove:
             rmtree(output_path)

@@ -1,5 +1,6 @@
 import Foundation
 import Yams
+import Logging
 
 public extension Optional where Wrapped == Int {
     var asStringifiedHyperparameter: String {
@@ -287,18 +288,38 @@ public struct HyperParamStorage: Codable {
     }
 }
 
+public extension Optional where Wrapped == Logger {
+    func error(_ message: String) {
+        if let logger = self {
+            logger.error(Logger.Message(stringLiteral: message))
+        } else {
+            print(message)
+        }
+    }
+}
+
+enum HyperParamSetsException: Error {
+    case invalidFile(path: String)
+}
+
 public struct HyperParamSets {
     let path: String?
     let storage: HyperParamStorage
 
-    public init(_ corpus: String, _ model: String, _ path: String) { // TODO: Implement exception handling
+    public init(_ corpus: String, _ model: String, _ path: String, logger: Logger? = nil) throws { // TODO: Implement exception handling
         let decoder = YAMLDecoder()
-        storage = try! decoder.decode(
-            HyperParamStorage.self, 
-            from: try! String(contentsOf: URL.local("./Assets/Hypersearch/\(corpus)/\(model)/\(path).yml")!, encoding: .utf8)
-        )
+        let absolute_path = URL.local("./Assets/Hypersearch/\(corpus)/\(model)/\(path).yml")!
+        do {
+            storage = try decoder.decode(
+                HyperParamStorage.self, 
+                from: try String(contentsOf: absolute_path, encoding: .utf8)
+            )
+        } catch {
+            logger.error("Cannot read hyperparameter sets from file '\(absolute_path)'")    
+            throw HyperParamSetsException.invalidFile(path: path)
+            // print(storage.sets)
+        }
         self.path = path
-        // print(storage.sets)
     }
 }
 

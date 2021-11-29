@@ -3,7 +3,31 @@ import ArgumentParser
 import Logging
 import wickedData
 
-enum Model: String, CaseIterable, ExpressibleByArgument {
+// typealias ModelImpl = (architecture: Model, platform: Platform)
+
+public struct ModelImpl: CustomStringConvertible {
+    public let architecture: Model
+    public let platform: Platform
+
+    public var description: String {
+        "\(architecture)@\(platform)"
+    }
+}
+
+public enum Platform: String, CaseIterable, ExpressibleByArgument {
+    case openke, grapex
+
+    public var index: Int {
+       switch self {
+           case .openke:
+              return 0
+           case .grapex:  
+              return 1
+       }
+    }
+}
+
+public enum Model: String, CaseIterable, ExpressibleByArgument {
     case transe, complex
 
     public var asOpenKeModel: OpenKeModel {

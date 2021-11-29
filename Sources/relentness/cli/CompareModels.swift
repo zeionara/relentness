@@ -3,9 +3,16 @@ import ArgumentParser
 import Logging
 import wickedData
 
-let MODELS_FOR_COMPARISON: [Model] = [.transe, .complex]
+let MODELS_FOR_COMPARISON: [ModelImpl] = [
+    ModelImpl(architecture: .transe, platform: .openke),
+    ModelImpl(architecture: .complex, platform: .openke)
+]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
+
+public enum ComparisonException: Error {
+    case invalidModel(model: ModelImpl, message: String? = nil)
+}
 
 public struct CompareModels: ParsableCommand {
     @Argument(help: "Name of folder which keeps the dataset for testing")
@@ -77,33 +84,38 @@ public struct CompareModels: ParsableCommand {
         let delay_ = delay
         let terminationDelay_ = terminationDelay
 
-        var hparams = [Model: HyperParamSet]()
+        var hparams = [String: HyperParamSet]()
 
         for model in MODELS_FOR_COMPARISON {
             logger.info("Testing model \(model)...")
             logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
             BlockingTask {
-                let sets = HyperParamSets(corpus_, model.rawValue, path_)
+                let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
 
                 for hparams in sets.storage.sets {
                     do {
                         let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
-                            try await OpenKeTester( // TODO: Create the instance once and then reuse it
-                                model: model.asOpenKeModel,
-                                env: env_,
-                                corpus: corpus_,
-                                nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
-                                remove: remove_,
-                                gpu: gpu_,
-                                differentGpus: differentGpus_,
-                                terminationDelay: terminationDelay_
-                            ).run(
-                                seeds: seeds_.count > 0 ? seeds_ : nil,
-                                delay: delay_,
-                                hparams: hparams
-                            )
+                            switch model.platform {
+                                case .openke:
+                                    return try await OpenKeTester( // TODO: Create the instance once and then reuse it
+                                        model: model.architecture.asOpenKeModel,
+                                        env: env_,
+                                        corpus: corpus_,
+                                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                                        remove: remove_,
+                                        gpu: gpu_,
+                                        differentGpus: differentGpus_,
+                                        terminationDelay: terminationDelay_
+                                    ).run(
+                                        seeds: seeds_.count > 0 ? seeds_ : nil,
+                                        delay: delay_,
+                                        hparams: hparams
+                                    )
+                               default:
+                                   throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
+                            }
                         }
 
                         let meanMetrics = mean(sets: metrics).mean.mean.mean
@@ -124,38 +136,43 @@ public struct CompareModels: ParsableCommand {
                 logger.info("\(String(describing: bestHparams))")
                 logger.info("")
 
-                hparams[model] = bestHparams
+                hparams[model.description] = bestHparams
             }
         }
 
         logger.info("Results of models validation: ")
         logger.info("model\t\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
         let sortedModels = MODELS_FOR_COMPARISON.sorted {
-            $0.index < $1.index
+            $0.architecture.index + $0.platform.index < $1.architecture.index + $0.platform.index
         }
         // var collectedModelValidationResults = [Model: ModelTestingResult]()
         for model in sortedModels {
             // logger.info("Validating model \(model)...")
-            let modelHparams = hparams[model]!
+            let modelHparams = hparams[model.description]!
             BlockingTask {
                 do {
                     let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [OpenKeTester.Metrics] in
-                        try await OpenKeTester(
-                            model: model.asOpenKeModel,
-                            env: env_,
-                            corpus: corpus_,
-                            nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
-                            remove: remove_,
-                            gpu: gpu_,
-                            differentGpus: differentGpus_,
-                            terminationDelay: terminationDelay_
-                        ).runSingleTest(
-                           seeds: seeds_.count > 0 ? seeds_ : nil,
-                           delay: delay_,
-                           cvSplitIndex: 0,
-                           hparams: modelHparams,
-                           usingValidationSubset: true
-                        )
+                        switch model.platform {
+                            case .openke:
+                                return try await OpenKeTester(
+                                    model: model.architecture.asOpenKeModel,
+                                    env: env_,
+                                    corpus: corpus_,
+                                    nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                                    remove: remove_,
+                                    gpu: gpu_,
+                                    differentGpus: differentGpus_,
+                                    terminationDelay: terminationDelay_
+                                ).runSingleTest(
+                                   seeds: seeds_.count > 0 ? seeds_ : nil,
+                                   delay: delay_,
+                                   cvSplitIndex: 0,
+                                   hparams: modelHparams,
+                                   usingValidationSubset: true
+                                )
+                            default:
+                                throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
+                        }
                     }
 
                     let meanMetrics = metrics.mean.mean.mean
