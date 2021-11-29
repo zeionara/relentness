@@ -100,12 +100,58 @@ public struct CompareModels: ParsableCommand {
         //     )                                                                                                                                                                                                      
         // )            
 
-        let adapter = try! GoogleSheetsApiAdapter()
+        // let adapter = try! GoogleSheetsApiAdapter()
 
         // try! adapter.append([["foo", "bar"], ["baz"]])
         // try! adapter.append([["qux"]])
 
-        print(try! adapter.add_sheet(title: "list-added-from-cli"))
+        // print(try! adapter.add_sheet(title: "list-added-from-cli"))
+
+        let addSheetRequest = GoogleSheetsApiRequest.addSheet(
+            AddSheet(
+                properties: SheetProperties(
+                    title: "new-sheet",
+                    tabColor: Color(
+                        red: 0.8,
+                        green: 0.2,
+                        blue: 0.3
+                    )
+                )
+            )
+        )
+
+        let appendDataRequest = GoogleSheetsApiRequest.appendCells(
+            AppendCells(
+                rows: [
+                    AppendCells.Row(
+                        values: [
+                            AppendCells.Row.Value(
+                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
+                                    // numberValue: 1.0,
+                                    stringValue: "foo"
+                                )
+                            ),
+                            AppendCells.Row.Value(
+                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
+                                    numberValue: 1.0
+                                    // stringValue: "foo"
+                                )
+                            )
+                        ]
+                    )
+                ]
+            )
+        )
+
+        print(String(data: try! JSONEncoder().encode([addSheetRequest, appendDataRequest]), encoding: .utf8))
+
+
+        // switch addSheetRequest {
+        //     case let .addSheet(request):
+        //         request
+        //     default:
+        //         "No element"
+        // }
 
         let env_ = env
         let grapexRoot_ = grapexRoot
