@@ -19,28 +19,51 @@ public enum Platform: String, CaseIterable, ExpressibleByArgument {
 
     public var index: Int {
        switch self {
+           case .grapex:  
+              return -1
            case .openke:
               return 0
-           case .grapex:  
-              return 1
        }
     }
 }
 
+public enum ModelConversionError: Error {
+   case modelIsNotImplemented(platform: Platform)
+}
+
 public enum Model: String, CaseIterable, ExpressibleByArgument {
-    case transe, complex
+    case transe, complex, se
 
     public var asOpenKeModel: OpenKeModel {
-        switch self {
+        get throws {
+            switch self {
             case .transe:
                 return .transe
             case .complex:
                 return .complex
+            case .se:
+                throw ModelConversionError.modelIsNotImplemented(platform: .openke) 
+            }
+        }
+    }
+
+    public var asGrapexModel: GrapexModel {
+        get throws {
+            switch self {
+                case .transe:
+                    return .transe
+                case .se:
+                    return .se
+                case .complex:
+                    throw ModelConversionError.modelIsNotImplemented(platform: .grapex)
+            }
         }
     }
 
     public var index: Int {
        switch self {
+           case .se:
+               return -1 
            case .transe:
               return 0
            case .complex:  

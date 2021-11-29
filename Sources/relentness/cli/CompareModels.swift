@@ -4,6 +4,8 @@ import Logging
 import wickedData
 
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
+    ModelImpl(architecture: .se, platform: .grapex),
+    ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
     ModelImpl(architecture: .complex, platform: .openke)
 ]
@@ -23,6 +25,9 @@ public struct CompareModels: ParsableCommand {
 
     @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
     var env: String = "reltf"
+
+    @Option(help: "Path to the cloned repository with the grapex framework with respect to the home directory for current user")
+    var grapexRoot: String = "grapex"
 
     @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
     var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
@@ -71,6 +76,7 @@ public struct CompareModels: ParsableCommand {
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
 
         let env_ = env
+        let grapexRoot_ = grapexRoot
         let corpus_ = corpus
         // let model_ = model
         let nWorkers_ = nWorkers
@@ -113,8 +119,23 @@ public struct CompareModels: ParsableCommand {
                                         delay: delay_,
                                         hparams: hparams
                                     )
-                               default:
-                                   throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
+                                case .grapex:
+                                    return try await GrapexTester( // TODO: Create the instance once and then reuse it
+                                        model: model.architecture.asGrapexModel,
+                                        env: grapexRoot_,
+                                        corpus: corpus_,
+                                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                                        remove: remove_,
+                                        gpu: gpu_,
+                                        differentGpus: differentGpus_,
+                                        terminationDelay: terminationDelay_
+                                    ).run(
+                                        seeds: seeds_.count > 0 ? seeds_ : nil,
+                                        delay: delay_,
+                                        hparams: hparams
+                                    )
+                                // default:
+                                //    throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
                             }
                         }
 
@@ -170,8 +191,25 @@ public struct CompareModels: ParsableCommand {
                                    hparams: modelHparams,
                                    usingValidationSubset: true
                                 )
-                            default:
-                                throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
+                            case .grapex:
+                                return try await GrapexTester( // TODO: Create the instance once and then reuse it
+                                    model: model.architecture.asGrapexModel,
+                                    env: grapexRoot_,
+                                    corpus: corpus_,
+                                    nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                                    remove: remove_,
+                                    gpu: gpu_,
+                                    differentGpus: differentGpus_,
+                                    terminationDelay: terminationDelay_
+                                ).runSingleTest(
+                                    seeds: seeds_.count > 0 ? seeds_ : nil,
+                                    delay: delay_,
+                                    cvSplitIndex: 0,
+                                    hparams: modelHparams,
+                                    usingValidationSubset: true
+                                )
+                            // default:
+                            //     throw ComparisonException.invalidModel(model: model, message: "Platform \(model.platform) is not supported")
                         }
                     }
 
