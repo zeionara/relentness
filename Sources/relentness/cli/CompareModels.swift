@@ -2,18 +2,25 @@ import Foundation
 import ArgumentParser
 import Logging
 import wickedData
+import ahsheet
 
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
-    ModelImpl(architecture: .se, platform: .grapex),
-    ModelImpl(architecture: .transe, platform: .grapex),
-    ModelImpl(architecture: .transe, platform: .openke),
-    ModelImpl(architecture: .complex, platform: .openke)
+    // ModelImpl(architecture: .se, platform: .grapex),
+    // ModelImpl(architecture: .transe, platform: .grapex),
+    // ModelImpl(architecture: .transe, platform: .openke),
+    // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
 
 public enum ComparisonException: Error {
     case invalidModel(model: ModelImpl, message: String? = nil)
+}
+
+extension Data: CustomStringConvertible {
+    var description: String {
+        String(decoding: self, as: UTF8.self)
+    }
 }
 
 public struct CompareModels: ParsableCommand {
@@ -74,6 +81,31 @@ public struct CompareModels: ParsableCommand {
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
 
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
+
+        // let wrapper = try! GoogleApiSessionWrapper()
+
+        // print("Sheets:")
+        // for sheet in try! wrapper.getSpreadsheetMeta().sheets {
+        //     print(sheet)
+        // }
+
+        // try! wrapper.setSheetData(                                                                                                                                                                                                                                                       
+        //     SheetData(                                                                                                                                                                                             
+        //         range: "sheets-adapter-testing!A1",                                                                                                                                                                                  
+        //         values: [                                                                                                                                                                                          
+        //             [                                                                                                                                                                                              
+        //                 "foo", "bar"                                                                                                                                                                               
+        //             ]                                                                                                                                                                                              
+        //         ]                                                                                                                                                                                                  
+        //     )                                                                                                                                                                                                      
+        // )            
+
+        let adapter = try! GoogleSheetsApiAdapter()
+
+        // try! adapter.append([["foo", "bar"], ["baz"]])
+        // try! adapter.append([["qux"]])
+
+        print(try! adapter.add_sheet(title: "list-added-from-cli"))
 
         let env_ = env
         let grapexRoot_ = grapexRoot
