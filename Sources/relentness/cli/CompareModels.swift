@@ -82,7 +82,21 @@ public struct CompareModels: ParsableCommand {
 
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
 
-        // let wrapper = try! GoogleApiSessionWrapper()
+        BlockingTask {
+            // let wrapper = try! GoogleApiSessionWrapper()
+            let adapter = try! GoogleSheetsApiAdapter()
+
+            // try! adapter.append([["foo", "bar"], ["baz"]])
+
+            _ = try! adapter.addSheet("novel-sheet", id: 23, tabColor: "e67c73")
+
+            async let batchUpdateResponse = adapter.commit()
+
+            print("foo")
+
+            print(await String(data: try! batchUpdateResponse!, encoding: .utf8)!)
+        }
+
 
         // print("Sheets:")
         // for sheet in try! wrapper.getSpreadsheetMeta().sheets {
@@ -107,43 +121,8 @@ public struct CompareModels: ParsableCommand {
 
         // print(try! adapter.add_sheet(title: "list-added-from-cli"))
 
-        let addSheetRequest = GoogleSheetsApiRequest.addSheet(
-            AddSheet(
-                properties: SheetProperties(
-                    title: "new-sheet",
-                    tabColor: Color(
-                        red: 0.8,
-                        green: 0.2,
-                        blue: 0.3
-                    )
-                )
-            )
-        )
 
-        let appendDataRequest = GoogleSheetsApiRequest.appendCells(
-            AppendCells(
-                rows: [
-                    AppendCells.Row(
-                        values: [
-                            AppendCells.Row.Value(
-                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
-                                    // numberValue: 1.0,
-                                    stringValue: "foo"
-                                )
-                            ),
-                            AppendCells.Row.Value(
-                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
-                                    numberValue: 1.0
-                                    // stringValue: "foo"
-                                )
-                            )
-                        ]
-                    )
-                ]
-            )
-        )
-
-        print(String(data: try! JSONEncoder().encode([addSheetRequest, appendDataRequest]), encoding: .utf8))
+        // print(String(data: try! JSONEncoder().encode(["requests": [addSheetRequest, appendDataRequest]]), encoding: .utf8)!)
 
 
         // switch addSheetRequest {
