@@ -2,6 +2,8 @@ import ahsheet
 import Foundation
 
 public class GoogleSheetsApiAdapter {
+    public static let sheetNameDateFormat = "dd-MM-yyyy"
+
     public var nextCell: Address
     public var sessionWrapper: GoogleApiSessionWrapper 
     private var nextSheetId: Int
@@ -24,7 +26,29 @@ public class GoogleSheetsApiAdapter {
         nextCell = Address(row: nextCell.rowIndex + data.count, column: nextCell.columnIndex, sheet: nextCell.sheet)
     }
 
-    public func addSheet(_ title: String, id: Int? = nil, tabColor: String? = nil) throws -> GoogleSheetsApiAdapter {
+    public var defaultTitle: String {
+        let dateFormatter: DateFormatter = DateFormatter()
+        dateFormatter.dateFormat = GoogleSheetsApiAdapter.sheetNameDateFormat
+
+        let date = Date()
+        let dateString = dateFormatter.string(from: date)
+
+        let git_rev = try! runSubprocessAndGetOutput(
+            path: "/usr/bin/git",
+            args: ["rev-parse", "--short", "HEAD"],
+            env: [:]
+        )!
+
+        let git_branch = try! runSubprocessAndGetOutput(
+            path: "/usr/bin/git",
+            args: ["rev-parse", "--abbrev-ref", "HEAD"], // , "|", "grep", "'*'", "|", "cut", "-d", "' '", "-f2"],
+            env: [:]
+        )!
+
+        return "\(dateString)-\(git_branch)-\(git_rev)"
+    }
+
+    public func addSheet(_ title: String? = nil, id: Int? = nil, tabColor: String? = nil) throws -> GoogleSheetsApiAdapter {
         var sheetId = 0
 
         if let idUnwrapped = id {
@@ -41,7 +65,7 @@ public class GoogleSheetsApiAdapter {
             GoogleSheetsApiRequest.addSheet(
                 AddSheet(
                     properties: AddSheet.SheetProperties(
-                        title: title,
+                        title: title ?? defaultTitle,
                         tabColor: color,
                         sheetId: sheetId
                     )
