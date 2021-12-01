@@ -71,12 +71,28 @@ public struct AddSheet: Codable {
     let properties: SheetProperties
 }
 
+public typealias CellValue = AppendCells.Row.Value.UserEnteredValue
+
 public struct AppendCells: Codable {
-    struct Row: Codable {
-        struct Value: Codable {
-            struct UserEnteredValue: Codable {
-                var numberValue: Double? = nil
-                var stringValue: String? = nil
+    public struct Row: Codable {
+        public struct Value: Codable {
+            public enum UserEnteredValue: Codable {
+                case number(value: Double)
+                case string(value: String) 
+                case bool(value: Bool) 
+
+                public func encode(to encoder: Encoder) {
+                    var container = encoder.singleValueContainer()
+
+                    switch self {
+                        case let .number(value):
+                            try! container.encode(["numberValue": value])
+                        case let .string(value):
+                            try! container.encode(["stringValue": value])
+                        case let .bool(value):
+                            try! container.encode(["boolValue": value])
+                    }
+                }
             }
 
             let userEnteredValue: UserEnteredValue

@@ -88,9 +88,20 @@ public struct CompareModels: ParsableCommand {
 
             // try! adapter.append([["foo", "bar"], ["baz"]])
 
-            _ = try! adapter.addSheet("novel-sheet", id: 23, tabColor: "e67c73")
+            _ = try! adapter
+                     .addSheet("novel-sheet", id: 23, tabColor: "e67c73")
+                     .appendCells(
+                         [
+                             [
+                                 CellValue.string(value: "foo"), CellValue.number(value: 2.3)
+                             ],
+                             [
+                                 CellValue.number(value: 1.7), CellValue.bool(value: false)
+                             ]
+                         ]
+                     )
 
-            async let batchUpdateResponse = adapter.commit()
+            async let batchUpdateResponse = adapter.commit(dryRun: false)
 
             print("foo")
 

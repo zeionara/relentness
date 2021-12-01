@@ -29,6 +29,7 @@ public class GoogleSheetsApiAdapter {
 
         if let idUnwrapped = id {
             sheetId = idUnwrapped
+            nextSheetId = sheetId + 1
         } else {
             sheetId = nextSheetId
             nextSheetId += 1
@@ -51,6 +52,27 @@ public class GoogleSheetsApiAdapter {
         return self
     }
 
+    public func appendCells(_ values: [[CellValue]], sheetId: Int? = nil) throws -> GoogleSheetsApiAdapter {
+        requests.append(
+            GoogleSheetsApiRequest.appendCells(
+                AppendCells(
+                    rows: values.map{row in
+                        AppendCells.Row(
+                            values: row.map{cell in
+                                AppendCells.Row.Value(
+                                    userEnteredValue: cell
+                                )
+                            }
+                        )
+                    },
+                    sheetId: sheetId ?? nextSheetId - 1
+                )
+                )
+            )
+
+        return self
+    }
+
     // public func add_sheet(title: String) throws -> String {
     //     let result = try sessionWrapper.batchUpdate(
     //         [[
@@ -67,46 +89,40 @@ public class GoogleSheetsApiAdapter {
     // }
 
     public func commit(dryRun: Bool = false) async throws -> Data? {
-        let addSheetRequest = GoogleSheetsApiRequest.addSheet(
-            AddSheet(
-                properties: AddSheet.SheetProperties(
-                    title: "new-sheet",
-                    tabColor: try! Color(
-                       "#00ff00" 
-                    ),
-                    sheetId: 17
-                )
-            )
-        )
+        // let addSheetRequest = GoogleSheetsApiRequest.addSheet(
+        //     AddSheet(
+        //         properties: AddSheet.SheetProperties(
+        //             title: "new-sheet",
+        //             tabColor: try! Color(
+        //                "#00ff00" 
+        //             ),
+        //             sheetId: 17
+        //         )
+        //     )
+        // )
 
-        let appendDataRequest = GoogleSheetsApiRequest.appendCells(
-            AppendCells(
-                rows: [
-                    AppendCells.Row(
-                        values: [
-                            AppendCells.Row.Value(
-                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
-                                    // numberValue: 1.0,
-                                    stringValue: "foo"
-                                )
-                            ),
-                            AppendCells.Row.Value(
-                                userEnteredValue: AppendCells.Row.Value.UserEnteredValue(
-                                    numberValue: 1.0
-                                    // stringValue: "foo"
-                                )
-                            )
-                        ]
-                    )
-                ],
-                sheetId: 23
-            )
-        )
+        // let appendDataRequest = GoogleSheetsApiRequest.appendCells(
+        //     AppendCells(
+        //         rows: [
+        //             AppendCells.Row(
+        //                 values: [
+        //                     AppendCells.Row.Value(
+        //                         userEnteredValue: CellValue.string("foo")
+        //                     ),
+        //                     AppendCells.Row.Value(
+        //                         userEnteredValue: CellValue.number(1.0)
+        //                     )
+        //                 ]
+        //             )
+        //         ],
+        //         sheetId: 23
+        //     )
+        // )
 
         if dryRun {
             print(
                 String(
-                    data: try JSONEncoder().encode(["requests": [requests.first!, appendDataRequest]]),
+                    data: try JSONEncoder().encode(["requests": requests]),
                     encoding: .utf8
                 )!
             )
@@ -117,7 +133,7 @@ public class GoogleSheetsApiAdapter {
         }
 
         return try sessionWrapper.batchUpdate(
-            try JSONEncoder().encode(["requests": [requests.first!, appendDataRequest]])
+            try JSONEncoder().encode(["requests": requests])
         )
     }
 }
