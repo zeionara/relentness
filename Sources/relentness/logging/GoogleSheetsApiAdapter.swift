@@ -159,6 +159,16 @@ public class GoogleSheetsApiAdapter {
         return self
     }
 
+    public func addConditionalFormattingRules(_ rules: [ConditionalFormattingRule]) {
+        requests.append(
+            contentsOf: rules.asRequests
+        )
+    }
+
+    public var lastSheetId: Int {
+        nextSheetId - 1
+    }
+
     // public func add_sheet(title: String) throws -> String {
     //     let result = try sessionWrapper.batchUpdate(
     //         [[

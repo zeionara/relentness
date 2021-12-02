@@ -21,10 +21,10 @@ public struct Color: Codable {
     private static func decodeComponent(match: NSTextCheckingResult, hexCode: String, name: String) -> Double {
         let binaryRange = match.range(withName: "\(name)Binary")
         if binaryRange.lowerBound < binaryRange.upperBound {
-            return Double(strtoul(String(hexCode[Range(binaryRange, in: hexCode)!]), nil, 16)) / 255.0
+            return Double(strtoul(String(hexCode[Swift.Range(binaryRange, in: hexCode)!]), nil, 16)) / 255.0
         }
         let singleRange = match.range(withName: "\(name)Single")
-        return Double(strtoul(String(hexCode[Range(singleRange, in: hexCode)!]), nil, 16)) / 15.0
+        return Double(strtoul(String(hexCode[Swift.Range(singleRange, in: hexCode)!]), nil, 16)) / 15.0
     }
 
     public init(_ hexCode: String, alpha: Double = 1.0) throws {
@@ -163,6 +163,7 @@ public struct AppendCells: Codable {
 public enum GoogleSheetsApiRequest: Codable {
     case addSheet(AddSheet)
     case appendCells(AppendCells)
+    case addConditionalFormatRule(ConditionalFormattingRule)
 
     public func encode(to encoder: Encoder) {
         var container = encoder.singleValueContainer()
@@ -172,6 +173,9 @@ public enum GoogleSheetsApiRequest: Codable {
                 try! container.encode(["addSheet": addSheetRequest])
             case let .appendCells(appendCellsRequest):
                 try! container.encode(["appendCells": appendCellsRequest])
+            case let .addConditionalFormatRule(addFormatRuleRequest):
+                try! container.encode(["addConditionalFormatRule": addFormatRuleRequest])
+
         }
     }
 }

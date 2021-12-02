@@ -8,7 +8,7 @@ let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
-    // ModelImpl(architecture: .complex, platform: .openke)
+    ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
@@ -108,6 +108,9 @@ public struct CompareModels: ParsableCommand {
 
             // try! adapter.append([["foo", "bar"], ["baz"]])
 
+            var currentMetricsRowOffset = 0
+            var formatRanges = adapter == nil ? nil : MeagerMetricSetFormatRanges(sheet: adapter!.lastSheetId + 1)  
+
             _ = try! adapter?
                      .addSheet(tabColor: "e67c73") // "novel-sheet", 
                      // .appendCells(
@@ -128,6 +131,9 @@ public struct CompareModels: ParsableCommand {
                          ],
                          format: .bold
                      )
+
+            currentMetricsRowOffset += 1
+
 
             // async let batchUpdateResponse = adapter?.commit(dryRun: false)
 
@@ -175,6 +181,7 @@ public struct CompareModels: ParsableCommand {
 
 
         var hparams = [String: HyperParamSet]()
+        let nTunableHparams = HyperParamSet.headerItems.count
 
         for model in MODELS_FOR_COMPARISON {
             logger.info("Testing model \(model)...")
@@ -193,9 +200,18 @@ public struct CompareModels: ParsableCommand {
                 ]
             )
 
+            currentMetricsRowOffset += 2
+
             // BlockingTask {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
+                formatRanges?.addMeasurements(
+                    height: sets.storage.sets.count,
+                    offset: CellLocation(
+                        row: currentMetricsRowOffset,
+                        column: nTunableHparams
+                    )
+                )
 
                 for hparams in sets.storage.sets {
                     do {
@@ -274,7 +290,13 @@ public struct CompareModels: ParsableCommand {
                 )
 
                 hparams[model.description] = bestHparams
+
+                currentMetricsRowOffset += sets.storage.sets.count + 4
             // }
+        }
+
+        if let unwrappedFormatRanges = formatRanges, unwrappedFormatRanges.conditionalFormattingRules.first!.ranges.count > 0 {
+            _ = adapter?.addConditionalFormattingRules(unwrappedFormatRanges.conditionalFormattingRules)
         }
 
         logger.info("Results of models validation: ")
@@ -362,8 +384,13 @@ public struct CompareModels: ParsableCommand {
                 }
             }
 
-            let _ = try? await adapter?.commit(dryRun: false)
+            let batchUpdateResponse = try! await adapter?.commit(dryRun: false)
 
+            print(batchUpdateResponse)
+
+            if let unwrappedResponse = batchUpdateResponse {
+                print(String(data: unwrappedResponse, encoding: .utf8)!)
+            }
         }
     }
 }
