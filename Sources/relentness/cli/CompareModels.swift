@@ -97,6 +97,9 @@ public struct CompareModels: ParsableCommand {
                              ],
                              [
                                  CellValue.number(value: 1.7), CellValue.bool(value: false)
+                             ],
+                             [
+                                 CellValue.number(value: 1.7), CellValue.bool(value: false)
                              ]
                          ]
                      )

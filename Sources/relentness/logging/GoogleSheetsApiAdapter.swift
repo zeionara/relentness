@@ -1,13 +1,16 @@
 import ahsheet
 import Foundation
 
+
 public class GoogleSheetsApiAdapter {
     public static let sheetNameDateFormat = "dd-MM-yyyy"
+    private static let sheetSuffixSize = 3
 
     public var nextCell: Address
     public var sessionWrapper: GoogleApiSessionWrapper 
     private var nextSheetId: Int
     private var requests: [GoogleSheetsApiRequest]
+    private var nextSheetSuffix: Int? = nil
 
     public init(sheet: String? = "sheets-adapter-testing", initialSheetId nextSheetId: Int = 17) throws {
         sessionWrapper = try GoogleApiSessionWrapper()
@@ -33,19 +36,50 @@ public class GoogleSheetsApiAdapter {
         let date = Date()
         let dateString = dateFormatter.string(from: date)
 
-        let git_rev = try! runSubprocessAndGetOutput(
+        let gitRev = try! runSubprocessAndGetOutput(
             path: "/usr/bin/git",
             args: ["rev-parse", "--short", "HEAD"],
             env: [:]
         )!
 
-        let git_branch = try! runSubprocessAndGetOutput(
+        let gitBranch = try! runSubprocessAndGetOutput(
             path: "/usr/bin/git",
             args: ["rev-parse", "--abbrev-ref", "HEAD"], // , "|", "grep", "'*'", "|", "cut", "-d", "' '", "-f2"],
             env: [:]
         )!
 
-        return "\(dateString)-\(git_branch)-\(git_rev)"
+        let baseTitle = "\(dateString)-\(gitBranch)-\(gitRev)"
+        var sheetSuffix: Int = -1
+
+        if let unwrappedSheetSuffix = nextSheetSuffix {
+            sheetSuffix = unwrappedSheetSuffix
+            nextSheetSuffix = unwrappedSheetSuffix + 1
+        } else {
+
+            let titleRegex = try! NSRegularExpression(pattern: "\(baseTitle)-(?<suffix>[0-9]{\(GoogleSheetsApiAdapter.sheetSuffixSize),\(GoogleSheetsApiAdapter.sheetSuffixSize)})")
+
+            let meta = try! sessionWrapper.getSpreadsheetMeta()
+
+            let existingIds = meta.sheets.map{
+                $0.title
+            }.filter{
+                $0.range(of: titleRegex.pattern, options: .regularExpression) == $0.startIndex..<$0.endIndex
+            }.map{
+                Int(
+                    $0.namedGroup(name: "suffix", regex: titleRegex)
+                )!
+            }
+
+            if existingIds.count < 1 {
+                sheetSuffix = 0
+            } else {
+                sheetSuffix = existingIds.max()! + 1
+            }
+
+            nextSheetSuffix = sheetSuffix + 1
+        }
+
+        return "\(baseTitle)-\(String(format: "%0\(GoogleSheetsApiAdapter.sheetSuffixSize)d", sheetSuffix))"
     }
 
     public func addSheet(_ title: String? = nil, id: Int? = nil, tabColor: String? = nil) throws -> GoogleSheetsApiAdapter {
