@@ -57,6 +57,9 @@ public struct CompareModels: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Enably wordy way of logging")
     var verbose = false
 
+    @Flag(name: .long, help: "Write results to google sheets")
+    var exportToGoogleSheets = false
+
     @Flag(name: .long, help: "Enably wordy way of logging")
     var discardExistingLogFile = false
 
@@ -77,50 +80,63 @@ public struct CompareModels: ParsableCommand {
     public init() {}
 
     mutating public func run() {
+        print(CommandLine.arguments.joined(separator: " "))
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
 
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        let exportToGoogleSheets_ = exportToGoogleSheets
+
+        let env_ = env
+        let grapexRoot_ = grapexRoot
+        let corpus_ = corpus
+        // let model_ = model
+        let nWorkers_ = nWorkers
+        let seeds_ = seeds
+
+        let remove_ = remove
+        let gpu_ = gpu
+        let differentGpus_ = differentGpus
+
+        let path_ = path
+        let delay_ = delay
+        let terminationDelay_ = terminationDelay
 
         BlockingTask {
             // let wrapper = try! GoogleApiSessionWrapper()
-            let adapter = try! GoogleSheetsApiAdapter()
+            let adapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter() : nil
 
             // try! adapter.append([["foo", "bar"], ["baz"]])
 
-            _ = try! adapter
+            _ = try! adapter?
                      .addSheet(tabColor: "e67c73") // "novel-sheet", 
+                     // .appendCells(
+                     //     [
+                     //         [
+                     //             CellValue.string(value: "foo"), CellValue.number(value: 2.3)
+                     //         ],
+                     //         [
+                     //             CellValue.number(value: 1.7), CellValue.bool(value: false)
+                     //         ]
+                     //     ]
+                     // )
                      .appendCells(
                          [
                              [
-                                 CellValue.string(value: "foo"), CellValue.number(value: 2.3)
-                             ],
-                             [
-                                 CellValue.number(value: 1.7), CellValue.bool(value: false)
-                             ]
-                         ]
-                     )
-                     .appendCells(
-                         [
-                             [
-                                 CellValue.string(value: "bar"), CellValue.number(value: 2.3)
+                                 CellValue.string(value: "Command:"), CellValue.string(value: CommandLine.arguments.joined(separator: " "))
                              ]
                          ],
-                         format: Format(
-                             textFormat: [
-                                 "bold": .bool(value: true),
-                                 "foregroundColor": .color(value: Color("f00"))
-                             ]
-                         )
-                         // style: [.bold]
+                         format: .bold
                      )
 
-            async let batchUpdateResponse = adapter.commit(dryRun: false)
+            // async let batchUpdateResponse = adapter?.commit(dryRun: false)
 
-            print("foo")
+            // print("foo")
 
-            print(await String(data: try! batchUpdateResponse!, encoding: .utf8)!)
-        }
+            // if let unwrappedResponse = try? await batchUpdateResponse {
+            //     print(String(data:  unwrappedResponse, encoding: .utf8)!)
+            // }
+        // }
 
 
         // print("Sheets:")
@@ -157,20 +173,6 @@ public struct CompareModels: ParsableCommand {
         //         "No element"
         // }
 
-        let env_ = env
-        let grapexRoot_ = grapexRoot
-        let corpus_ = corpus
-        // let model_ = model
-        let nWorkers_ = nWorkers
-        let seeds_ = seeds
-
-        let remove_ = remove
-        let gpu_ = gpu
-        let differentGpus_ = differentGpus
-
-        let path_ = path
-        let delay_ = delay
-        let terminationDelay_ = terminationDelay
 
         var hparams = [String: HyperParamSet]()
 
@@ -178,7 +180,7 @@ public struct CompareModels: ParsableCommand {
             logger.info("Testing model \(model)...")
             logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
-            BlockingTask {
+            // BlockingTask {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
 
@@ -240,11 +242,28 @@ public struct CompareModels: ParsableCommand {
                 logger.info("")
 
                 hparams[model.description] = bestHparams
-            }
+            // }
         }
 
         logger.info("Results of models validation: ")
+
+        _ = try? adapter?.appendCells(
+            [
+                [
+                    CellValue.string(value: "Results of models validation: ")
+                ]
+            ],
+            format: .bold
+        )
+
         logger.info("model\t\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
+
+        _ = try? await adapter?.appendCells(
+            [
+                ([CellValue.string(value: "model")] + HyperParamSet.headerItems + MeagerMetricSeries.headerItemsWithExecutionTime)
+            ]
+        )
+
         let sortedModels = MODELS_FOR_COMPARISON.sorted {
             $0.architecture.index + $0.platform.index < $1.architecture.index + $0.platform.index
         }
@@ -252,7 +271,7 @@ public struct CompareModels: ParsableCommand {
         for model in sortedModels {
             // logger.info("Validating model \(model)...")
             let modelHparams = hparams[model.description]!
-            BlockingTask {
+            // BlockingTask {
                 do {
                     let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [OpenKeTester.Metrics] in
                         switch model.platform {
@@ -303,6 +322,9 @@ public struct CompareModels: ParsableCommand {
                     print("Unexpected error \(error), cannot complete testing")
                 }
             }
+
+            let _ = try? await adapter?.commit(dryRun: false)
+
         }
     }
 }

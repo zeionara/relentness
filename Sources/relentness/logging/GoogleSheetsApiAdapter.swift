@@ -113,7 +113,30 @@ public class GoogleSheetsApiAdapter {
         return self
     }
 
-    public func appendCells(_ values: [[CellValue]], sheetId: Int? = nil, style: [AppendCells.Row.Value.TextStyle]? = nil, format: Format? = nil) throws -> GoogleSheetsApiAdapter {
+    public enum FormatWrapper {
+        case bold
+        case boldRed
+
+        public var decoded: Format {
+            switch self {
+                case .bold:
+                    return Format(
+                         textFormat: [
+                             "bold": .bool(value: true)
+                         ]
+                     )
+                case .boldRed:
+                    return Format(
+                         textFormat: [
+                             "bold": .bool(value: true),
+                             "foregroundColor": .color(value: try! Color("f00"))
+                         ]
+                     )
+            }
+        }
+    }
+
+    public func appendCells(_ values: [[CellValue]], sheetId: Int? = nil, style: [AppendCells.Row.Value.TextStyle]? = nil, format: FormatWrapper? = nil) throws -> GoogleSheetsApiAdapter {
         requests.append(
             GoogleSheetsApiRequest.appendCells(
                 AppendCells(
@@ -123,7 +146,7 @@ public class GoogleSheetsApiAdapter {
                                 AppendCells.Row.Value(
                                     userEnteredValue: cell,
                                     textFormatRuns: style,
-                                    userEnteredFormat: format
+                                    userEnteredFormat: format?.decoded
                                 )
                             }
                         )
