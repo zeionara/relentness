@@ -11,11 +11,14 @@ public class GoogleSheetsApiAdapter {
     private var nextSheetId: Int
     private var requests: [GoogleSheetsApiRequest]
     private var nextSheetSuffix: Int? = nil
+    private var spreadsheetMetaCache: SpreadsheetMeta? = nil
 
-    public init(sheet: String? = "sheets-adapter-testing", initialSheetId nextSheetId: Int = 17) throws {
+    public init(sheet: String? = "sheets-adapter-testing", initialSheetId: Int? = nil) throws {
         sessionWrapper = try GoogleApiSessionWrapper()
         nextCell = Address(row: 0, column: 0, sheet: sheet) 
-        self.nextSheetId = nextSheetId
+        let spreadsheetMetaCache = try! sessionWrapper.getSpreadsheetMeta()
+        self.spreadsheetMetaCache = spreadsheetMetaCache
+        self.nextSheetId = initialSheetId ?? (spreadsheetMetaCache.sheets.map{$0.id}.max()! + 1)
         self.requests = [GoogleSheetsApiRequest]()
     }
 
@@ -58,7 +61,7 @@ public class GoogleSheetsApiAdapter {
 
             let titleRegex = try! NSRegularExpression(pattern: "\(baseTitle)-(?<suffix>[0-9]{\(GoogleSheetsApiAdapter.sheetSuffixSize),\(GoogleSheetsApiAdapter.sheetSuffixSize)})")
 
-            let meta = try! sessionWrapper.getSpreadsheetMeta()
+            let meta = getSpreadsheetMeta() // try! sessionWrapper.getSpreadsheetMeta()
 
             let existingIds = meta.sheets.map{
                 $0.title
@@ -193,6 +196,16 @@ public class GoogleSheetsApiAdapter {
         return try sessionWrapper.batchUpdate(
             try JSONEncoder().encode(["requests": requests])
         )
+    }
+
+    public func getSpreadsheetMeta(forcePull: Bool = false) -> SpreadsheetMeta {
+        if let cache = spreadsheetMetaCache, forcePull == false {
+            return cache
+        } else {
+            let cache = try! sessionWrapper.getSpreadsheetMeta()
+            spreadsheetMetaCache = cache
+            return cache
+        }
     }
 }
 

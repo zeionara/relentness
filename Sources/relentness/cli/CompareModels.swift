@@ -89,7 +89,7 @@ public struct CompareModels: ParsableCommand {
             // try! adapter.append([["foo", "bar"], ["baz"]])
 
             _ = try! adapter
-                     .addSheet(id: 23, tabColor: "e67c73") // "novel-sheet", 
+                     .addSheet(tabColor: "e67c73") // "novel-sheet", 
                      .appendCells(
                          [
                              [
