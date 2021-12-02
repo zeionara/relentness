@@ -97,11 +97,22 @@ public struct CompareModels: ParsableCommand {
                              ],
                              [
                                  CellValue.number(value: 1.7), CellValue.bool(value: false)
-                             ],
-                             [
-                                 CellValue.number(value: 1.7), CellValue.bool(value: false)
                              ]
                          ]
+                     )
+                     .appendCells(
+                         [
+                             [
+                                 CellValue.string(value: "bar"), CellValue.number(value: 2.3)
+                             ]
+                         ],
+                         format: Format(
+                             textFormat: [
+                                 "bold": .bool(value: true),
+                                 "foregroundColor": .color(value: Color("f00"))
+                             ]
+                         )
+                         // style: [.bold]
                      )
 
             async let batchUpdateResponse = adapter.commit(dryRun: false)

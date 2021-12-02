@@ -24,7 +24,7 @@ public struct Color: Codable {
             return Double(strtoul(String(hexCode[Range(binaryRange, in: hexCode)!]), nil, 16)) / 255.0
         }
         let singleRange = match.range(withName: "\(name)Single")
-        return Double(strtoul(String(hexCode[Range(singleRange, in: hexCode)!]), nil, 16)) / 255.0
+        return Double(strtoul(String(hexCode[Range(singleRange, in: hexCode)!]), nil, 16)) / 15.0
     }
 
     public init(_ hexCode: String, alpha: Double = 1.0) throws {
@@ -72,6 +72,7 @@ public struct AddSheet: Codable {
 }
 
 public typealias CellValue = AppendCells.Row.Value.UserEnteredValue
+public typealias Format = AppendCells.Row.Value.CellFormat
 
 public struct AppendCells: Codable {
     public struct Row: Codable {
@@ -95,7 +96,59 @@ public struct AppendCells: Codable {
                 }
             }
 
+            public struct TextFormatRun: Codable {
+                public enum TextFormatValue: Codable {
+                    case number(value: Double)
+                    case string(value: String)
+                    case bool(value: Bool)
+                    case color(value: Color)
+
+                    public func encode(to encoder: Encoder) {
+                        var container = encoder.singleValueContainer()
+
+                        switch self {
+                        case let .number(value):
+                            try! container.encode(value)
+                        case let .string(value):
+                            try! container.encode(value)
+                        case let .bool(value):
+                            try! container.encode(value)
+                        case let .color(value):
+                            try! container.encode(value)
+                        }
+                    }
+                }
+
+                public var format: [String: TextFormatValue]
+                public var startIndex: Int? = nil
+            }
+
+            public enum TextStyle: Codable {
+                case bold
+
+                public func encode(to encoder: Encoder) {
+                    var container = encoder.singleValueContainer()
+
+                    switch self {
+                        case .bold:
+                            try! container.encode(
+                                TextFormatRun(
+                                    format: ["bold": .bool(value: true)],
+                                    startIndex: 0
+                                )
+                            )
+                    }
+
+                }
+            }
+
+            public struct CellFormat: Codable {
+                public var textFormat: [String: TextFormatRun.TextFormatValue]
+            }
+
             let userEnteredValue: UserEnteredValue
+            var textFormatRuns: [TextStyle]? = nil
+            var userEnteredFormat: CellFormat? = nil
         }
 
         let values: [Value]
@@ -105,7 +158,7 @@ public struct AppendCells: Codable {
     let sheetId: Int
     var fields: String = "*"
 }
-    
+
 
 public enum GoogleSheetsApiRequest: Codable {
     case addSheet(AddSheet)

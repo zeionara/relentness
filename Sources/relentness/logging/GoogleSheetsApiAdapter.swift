@@ -113,7 +113,7 @@ public class GoogleSheetsApiAdapter {
         return self
     }
 
-    public func appendCells(_ values: [[CellValue]], sheetId: Int? = nil) throws -> GoogleSheetsApiAdapter {
+    public func appendCells(_ values: [[CellValue]], sheetId: Int? = nil, style: [AppendCells.Row.Value.TextStyle]? = nil, format: Format? = nil) throws -> GoogleSheetsApiAdapter {
         requests.append(
             GoogleSheetsApiRequest.appendCells(
                 AppendCells(
@@ -121,7 +121,9 @@ public class GoogleSheetsApiAdapter {
                         AppendCells.Row(
                             values: row.map{cell in
                                 AppendCells.Row.Value(
-                                    userEnteredValue: cell
+                                    userEnteredValue: cell,
+                                    textFormatRuns: style,
+                                    userEnteredFormat: format
                                 )
                             }
                         )
