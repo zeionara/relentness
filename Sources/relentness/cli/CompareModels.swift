@@ -7,7 +7,7 @@ import ahsheet
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
-    // ModelImpl(architecture: .transe, platform: .openke),
+    ModelImpl(architecture: .transe, platform: .openke),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -180,6 +180,19 @@ public struct CompareModels: ParsableCommand {
             logger.info("Testing model \(model)...")
             logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
+            _ = try! adapter?.appendCells(
+                [
+                    [
+                        CellValue.string(value: "Testing model \(model)...")
+                    ]
+                ],
+                format: .bold
+            ).appendCells(
+                [
+                    HyperParamSet.headerItems + MeagerMetricSeries.headerItemsWithExecutionTime
+                ]
+            )
+
             // BlockingTask {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
@@ -227,6 +240,12 @@ public struct CompareModels: ParsableCommand {
                         collectedModelTestingResults.append((meanMetrics: meanMetrics, hparams: hparams, executionTime: executionTime))
 
                         logger.info("\(hparams)\t\(meanMetrics.descriptionWithExecutionTime(executionTime))") // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+
+                        _ = try! adapter?.appendCells(
+                            [
+                                hparams.descriptionItems + meanMetrics.descriptionItemsWithExecutionTime(executionTime)
+                            ]
+                        )
                     } catch {
                         print("Unexpected error \(error), cannot complete testing")
                     }
@@ -241,13 +260,26 @@ public struct CompareModels: ParsableCommand {
                 logger.info("\(String(describing: bestHparams))")
                 logger.info("")
 
+                _ = try! adapter?.appendCells(
+                    [
+                        [
+                            CellValue.string(value: "Best hyperparameter values:")
+                        ],
+                        HyperParamSet.headerItems,
+                        bestHparams.descriptionItems,
+                        [
+                            CellValue.string(value: " ")
+                        ]
+                    ]
+                )
+
                 hparams[model.description] = bestHparams
             // }
         }
 
         logger.info("Results of models validation: ")
 
-        _ = try? adapter?.appendCells(
+        _ = try! adapter?.appendCells(
             [
                 [
                     CellValue.string(value: "Results of models validation: ")
@@ -258,7 +290,7 @@ public struct CompareModels: ParsableCommand {
 
         logger.info("model\t\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
-        _ = try? await adapter?.appendCells(
+        _ = try! adapter?.appendCells(
             [
                 ([CellValue.string(value: "model")] + HyperParamSet.headerItems + MeagerMetricSeries.headerItemsWithExecutionTime)
             ]
@@ -317,6 +349,13 @@ public struct CompareModels: ParsableCommand {
                     let meanMetrics = metrics.mean.mean.mean
                     
                     logger.info("\(model)\t\(modelHparams)\t\(meanMetrics.descriptionWithExecutionTime(executionTime))")
+
+                    _ = try! adapter?.appendCells(
+                        [
+                            ([CellValue.string(value: model.description)] + modelHparams.descriptionItems + meanMetrics.descriptionItemsWithExecutionTime(executionTime))
+                        ]
+                    )
+
                     // collectedModelTestingResults[model] = (meanMetrics: meanMetrics, hparams: modelHparams, executionTime: executionTime)
                 } catch {
                     print("Unexpected error \(error), cannot complete testing")

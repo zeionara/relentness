@@ -55,16 +55,16 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
         self.totalTime = nil
     }
 
-    public var descriptionItems: [Double] {
+    public var descriptionItems: [CellValue] {
         [
             meanRank.round(places: N_DECIMAL_PLACES),
             meanReciprocalRank.round(places: N_DECIMAL_PLACES),
             hitsAtOne.round(places: N_DECIMAL_PLACES),
             hitsAtThree.round(places: N_DECIMAL_PLACES),
             hitsAtTen.round(places: N_DECIMAL_PLACES),
-            time!.round(places: N_DECIMAL_PLACES),
-            totalTime!.round(places: N_DECIMAL_PLACES)
-        ]
+            (time ?? 0.0).round(places: N_DECIMAL_PLACES),
+            (totalTime ?? time ?? 0.0).round(places: N_DECIMAL_PLACES)
+        ].map{CellValue.number(value: $0)}
     }
 
     public var description: String {
@@ -75,8 +75,8 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
         ].joined(separator: "\t")
     }
 
-    public func descriptionItemsWithExecutionTime(_ executionTime: Double) -> [Double] {
-        descriptionItems + [executionTime.round(places: N_DECIMAL_PLACES)]
+    public func descriptionItemsWithExecutionTime(_ executionTime: Double) -> [CellValue] {
+        descriptionItems + [CellValue.number(value: executionTime.round(places: N_DECIMAL_PLACES))]
     }
 
     public func descriptionWithExecutionTime(_ executionTime: Double) -> String {
