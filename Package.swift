@@ -9,7 +9,9 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/zeionara/wicked-data", branch: "master"),
-        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
+        .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6"),
+        .package(url: "/home/zeio/ahsheet", .branch("oauth"))
+        // .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth"))
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
     ],
@@ -22,7 +24,8 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "wickedData", package: "wicked-data"),
-                .product(name: "Yams", package: "Yams")
+                .product(name: "Yams", package: "Yams"),
+                .product(name: "ahsheet", package: "ahsheet")
             ]),
         .testTarget(
             name: "relentnessTests",

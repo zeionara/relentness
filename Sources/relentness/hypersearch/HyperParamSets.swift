@@ -9,15 +9,29 @@ public extension Optional where Wrapped == Int {
         }
         return "-"
     }
+
+    var asUserEnteredValue: CellValue {
+        if let unwrapped = self {
+            return CellValue.number(value: Double(unwrapped))
+        }
+        return CellValue.string(value: "-")
+    }
 }
 
 
 public extension Optional where Wrapped == Double {
     var asStringifiedHyperparameter: String {
         if let unwrapped = self {
-            return String(format: "%.5f", unwrapped)
+            return String(format: FLOAT_FORMAT, unwrapped)
         }
         return "-"
+    }
+
+    var asUserEnteredValue: CellValue {
+        if let unwrapped = self {
+            return CellValue.number(value: unwrapped.round(places: N_DECIMAL_PLACES))
+        }
+        return CellValue.string(value: "-")
     }
 }
 
@@ -28,6 +42,13 @@ public extension Optional where Wrapped == String {
         }
         return "-"
     }
+
+    var asUserEnteredValue: CellValue {
+        if let unwrapped = self {
+            return CellValue.string(value: unwrapped)
+        }
+        return CellValue.string(value: "-")
+    }
 }
 
 public extension Optional where Wrapped == Bool {
@@ -36,6 +57,13 @@ public extension Optional where Wrapped == Bool {
             return unwrapped ? "true" : "false"
         }
         return "-"
+    }
+
+    var asUserEnteredValue: CellValue {
+        if let unwrapped = self {
+            return CellValue.bool(value: unwrapped)
+        }
+        return CellValue.string(value: "-")
     }
 }
 
@@ -80,8 +108,28 @@ public struct HyperParamSet: CustomStringConvertible, Sendable {
     public let nWorkers: Int?
     public let importPath: String?
 
+    private static let headerItemLabels = [
+        "n-epochs", "n-batches", "alpha", "margin", "dimension", "entity-neg-rate", "relation-neg-rate",
+        "lambda", "optimizer", "task", "bern", "relation-dim", "entity-dim", "patience", "min-delta", "n-workers", "import-path"
+    ]
+
+    public static var headerItems: [CellValue] {
+        headerItemLabels.map{CellValue.string(value: $0)}
+    }
+
     public static var header: String {
-        "n-epochs\tn-batches\talpha\tmargin\tdimension\tentity-neg-rate\trelation-neg-rate\tlambda\toptimizer\ttask\tbern\trelation-dim\tentity-dim\tpatience\tmin-delta\tn-workers\timport-path"
+        headerItemLabels.joined(separator: "\t")
+    }
+
+    public var descriptionItems: [CellValue] {
+        [
+            nEpochs.asUserEnteredValue, nBatches.asUserEnteredValue, alpha.asUserEnteredValue, margin.asUserEnteredValue,
+            hiddenSize.asUserEnteredValue, entityNegativeRate.asUserEnteredValue,
+            relationNegativeRate.asUserEnteredValue, lambda.asUserEnteredValue, (optimizer?.rawValue).asUserEnteredValue, 
+            (task?.rawValue).asUserEnteredValue, bern.asUserEnteredValue,
+            relationDimension.asUserEnteredValue, entityDimension.asUserEnteredValue, patience.asUserEnteredValue, minDelta.asUserEnteredValue,
+            nWorkers.asUserEnteredValue, importPath.asUserEnteredValue
+        ]
     }
 
     public var description: String {
@@ -190,16 +238,6 @@ public struct HyperParamStorage: Codable {
         }
 
         return result
-    }
-}
-
-public extension Optional where Wrapped == Logger {
-    func error(_ message: String) {
-        if let logger = self {
-            logger.error(Logger.Message(stringLiteral: message))
-        } else {
-            print(message)
-        }
     }
 }
 
