@@ -8,7 +8,7 @@ let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
-    ModelImpl(architecture: .complex, platform: .openke)
+    // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
@@ -82,6 +82,7 @@ public struct CompareModels: ParsableCommand {
 
         let exportToGoogleSheets_ = exportToGoogleSheets
 
+
         let env_ = env
         let grapexRoot_ = grapexRoot
         let corpus_ = corpus
@@ -101,6 +102,13 @@ public struct CompareModels: ParsableCommand {
 
         BlockingTask {
             let adapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter() : nil
+
+            let tracker = ProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
+            let telegramBot = try! TelegramAdapter(tracker: tracker)
+
+            async let void = await telegramBot.run()
+
+            // print("foo")
 
             var currentMetricsRowOffset = 0
             let formatRanges = adapter == nil ? nil : MeagerMetricSetFormatRanges(sheet: adapter!.lastSheetId + 1)  
@@ -136,6 +144,10 @@ public struct CompareModels: ParsableCommand {
 
             var hparams = [String: HyperParamSet]()
             let nTunableHparams = HyperParamSet.headerItems.count
+            var startedTelegramBot = false
+            // var isFirstModel = true
+            // var tracker: ProgressTracker? = nil
+            // var telegramBot: TelegramAdapter? = nil
 
             for model in MODELS_FOR_COMPARISON {
                 logger.info("Testing model \(model)...")
@@ -159,6 +171,33 @@ public struct CompareModels: ParsableCommand {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
 
+
+                // if !startedTelegramBot {
+                //     print("Starting telegram bot...")
+                //     tracker = ProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: sets.storage.sets.count)
+                //     telegramBot = try? TelegramAdapter(tracker: tracker!)
+
+
+                //     startedTelegramBot = true
+
+                //     print("Exiting...")
+                // } else {
+                //     if let unwrappedTracker = tracker {
+                //         async let result = unwrappedTracker.nextModel(nHyperParameterSets: sets.storage.sets.count)
+                //     }
+                // }
+
+                // if let unwrappedBot = telegramBot {
+                //     async let botCompletionResult = unwrappedBot.run()
+                //     print("Started")
+                // }
+
+                // if isFirstModel {
+                async let void = tracker.setNhyperParameterSets(sets.storage.sets.count)
+                // }
+
+                print("Add measurements for the conditional format ranges")
+
                 formatRanges?.addMeasurements(
                     height: sets.storage.sets.count,
                     offset: CellLocation(
@@ -167,6 +206,8 @@ public struct CompareModels: ParsableCommand {
                     )
                 )
 
+                print("Add measurements for the numerical format ranges")
+
                 numberFormatRanges?.addMeasurements(
                     height: sets.storage.sets.count,
                     offset: CellLocation(
@@ -174,6 +215,8 @@ public struct CompareModels: ParsableCommand {
                         column: nTunableHparams
                     )
                 )
+
+                print("Checking hyperparams...")
 
                 for hparams in sets.storage.sets {
                     do {
@@ -227,6 +270,13 @@ public struct CompareModels: ParsableCommand {
                         return
                         // throw error
                     }
+
+                    // if let unwrappedTracker = tracker {
+                    //     async let result = unwrappedTracker.nextHyperParameterSet()
+                    // }
+                    Task {
+                        try! await tracker.nextHyperParameterSet()
+                    }
                 }
 
                 let bestHparams = collectedModelTestingResults.sorted{ (lhs, rhs) in
@@ -261,6 +311,10 @@ public struct CompareModels: ParsableCommand {
                 hparams[model.description] = bestHparams
 
                 currentMetricsRowOffset += sets.storage.sets.count + 4
+
+                Task {
+                    await tracker.nextModel()
+                }
             }
 
             var collectedModelValidationResults = [ModelTestingResult]()

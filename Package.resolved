@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "ahsheet",
-        "repositoryURL": "/home/zeio/ahsheet",
+        "repositoryURL": "https://github.com/zeionara/ahsheet.git",
         "state": {
           "branch": "oauth",
           "revision": "db5065989401eee67815e64040641b0c775a3f60",
@@ -71,6 +71,15 @@
           "branch": null,
           "revision": "9008021a68686c1ce913eb273e016c2db184f3dd",
           "version": "1.2.1"
+        }
+      },
+      {
+        "package": "TelegramBotSDK",
+        "repositoryURL": "https://github.com/zmeyc/telegram-bot-swift.git",
+        "state": {
+          "branch": null,
+          "revision": "c03186fdbde69be648be33c57793a2d83c5a8256",
+          "version": "2.1.2"
         }
       },
       {
