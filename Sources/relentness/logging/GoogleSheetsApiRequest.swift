@@ -143,7 +143,15 @@ public struct AppendCells: Codable {
             }
 
             public struct CellFormat: Codable {
+                // public struct NumberFormat: Codable {
+                //     let type: String = "NUMBER"
+                //     let pattern: String
+                // }
+
                 public var textFormat: [String: TextFormatRun.TextFormatValue]
+                // public var numberFormat: NumberFormat = NumberFormat(
+                //     pattern: "0.000"
+                // )
             }
 
             let userEnteredValue: UserEnteredValue
@@ -164,6 +172,7 @@ public enum GoogleSheetsApiRequest: Codable {
     case addSheet(AddSheet)
     case appendCells(AppendCells)
     case addConditionalFormatRule(ConditionalFormattingRule)
+    case repeatCell(NumberFormatRule)
 
     public func encode(to encoder: Encoder) {
         var container = encoder.singleValueContainer()
@@ -175,7 +184,8 @@ public enum GoogleSheetsApiRequest: Codable {
                 try! container.encode(["appendCells": appendCellsRequest])
             case let .addConditionalFormatRule(addFormatRuleRequest):
                 try! container.encode(["addConditionalFormatRule": addFormatRuleRequest])
-
+            case let .repeatCell(repeatCell):
+                try! container.encode(["repeatCell": repeatCell])
         }
     }
 }

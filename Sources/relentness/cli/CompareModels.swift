@@ -8,7 +8,7 @@ let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
-    ModelImpl(architecture: .complex, platform: .openke)
+    // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
@@ -109,7 +109,8 @@ public struct CompareModels: ParsableCommand {
             // try! adapter.append([["foo", "bar"], ["baz"]])
 
             var currentMetricsRowOffset = 0
-            var formatRanges = adapter == nil ? nil : MeagerMetricSetFormatRanges(sheet: adapter!.lastSheetId + 1)  
+            let formatRanges = adapter == nil ? nil : MeagerMetricSetFormatRanges(sheet: adapter!.lastSheetId + 1)  
+            let numberFormatRanges = adapter == nil ? nil : MeagerMetricSetNumberFormatRanges(sheet: adapter!.lastSheetId + 1)
 
             _ = try! adapter?
                      .addSheet(tabColor: "e67c73") // "novel-sheet", 
@@ -205,7 +206,16 @@ public struct CompareModels: ParsableCommand {
             // BlockingTask {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
+
                 formatRanges?.addMeasurements(
+                    height: sets.storage.sets.count,
+                    offset: CellLocation(
+                        row: currentMetricsRowOffset,
+                        column: nTunableHparams
+                    )
+                )
+
+                numberFormatRanges?.addMeasurements(
                     height: sets.storage.sets.count,
                     offset: CellLocation(
                         row: currentMetricsRowOffset,
@@ -295,10 +305,6 @@ public struct CompareModels: ParsableCommand {
             // }
         }
 
-        if let unwrappedFormatRanges = formatRanges, unwrappedFormatRanges.conditionalFormattingRules.first!.ranges.count > 0 {
-            _ = adapter?.addConditionalFormattingRules(unwrappedFormatRanges.conditionalFormattingRules)
-        }
-
         logger.info("Results of models validation: ")
 
         _ = try! adapter?.appendCells(
@@ -317,6 +323,8 @@ public struct CompareModels: ParsableCommand {
                 ([CellValue.string(value: "model")] + HyperParamSet.headerItems + MeagerMetricSeries.headerItemsWithExecutionTime)
             ]
         )
+
+        currentMetricsRowOffset += 2
 
         let sortedModels = MODELS_FOR_COMPARISON.sorted {
             $0.architecture.index + $0.platform.index < $1.architecture.index + $0.platform.index
@@ -384,12 +392,34 @@ public struct CompareModels: ParsableCommand {
                 }
             }
 
+            if let unwrappedFormatRanges = formatRanges, unwrappedFormatRanges.conditionalFormattingRules.first!.ranges.count > 0 {
+                unwrappedFormatRanges.addMeasurements(
+                    height: MODELS_FOR_COMPARISON.count,
+                    offset: CellLocation(
+                        row: currentMetricsRowOffset,
+                        column: nTunableHparams + 1
+                    )
+                )
+
+                _ = adapter?.addConditionalFormattingRules(unwrappedFormatRanges.conditionalFormattingRules)
+            }
+
+            if let unwrappedFormatRanges = numberFormatRanges, unwrappedFormatRanges.numberFormatRules.count > 0 {
+                unwrappedFormatRanges.addMeasurements(
+                    height: MODELS_FOR_COMPARISON.count,
+                    offset: CellLocation(
+                        row: currentMetricsRowOffset,
+                        column: nTunableHparams + 1
+                    )
+                )
+
+                _ = adapter?.addNumberFormatRules(unwrappedFormatRanges.numberFormatRules)
+            }
+
             let batchUpdateResponse = try! await adapter?.commit(dryRun: false)
 
-            print(batchUpdateResponse)
-
             if let unwrappedResponse = batchUpdateResponse {
-                print(String(data: unwrappedResponse, encoding: .utf8)!)
+                logger.info(Logger.Message(stringLiteral: String(data: unwrappedResponse, encoding: .utf8)!))
             }
         }
     }

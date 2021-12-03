@@ -20,7 +20,7 @@ private struct MeagerMetricSeriesIndexMap {
     }
 }
 
-public let N_DECIMAL_PLACES = 3
+public let N_DECIMAL_PLACES = 4
 public let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
 
 infix operator +++: AdditionPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications

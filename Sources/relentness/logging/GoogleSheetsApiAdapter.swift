@@ -165,6 +165,12 @@ public class GoogleSheetsApiAdapter {
         )
     }
 
+    public func addNumberFormatRules(_ rules: [NumberFormatRule]) {
+        requests.append(
+            contentsOf: rules.asRequests
+        )
+    }
+
     public var lastSheetId: Int {
         nextSheetId - 1
     }

@@ -142,6 +142,67 @@ public struct ConditionalFormattingRule: Codable {
     }
 }
 
+public struct NumberFormatRule: Codable {
+    // public struct RepeatCell: Codable {
+    let range: Range
+    var cell: [String: [String: [String: String]]] = [
+        "userEnteredFormat": [
+            "numberFormat": [
+                "type": "NUMBER",
+                "pattern": "0.\(Array(repeating: "0", count: N_DECIMAL_PLACES).joined())"
+            ]
+        ]
+    ]
+    var fields: String = "userEnteredFormat.numberFormat"
+    // }
+
+    // let range: Range
+
+    public init(range: Range) {
+        self.range = range
+    } 
+
+    // public func encode(to encoder: Encoder) throws {
+    //     var container = encoder.singleValueContainer()
+
+    //     try container.encode(["repeatCell": RepeatCell(range: range)])
+    // }
+}
+
+public class MeagerMetricSetNumberFormatRanges {
+    private(set) var ranges: [Range]
+
+    public let sheet: Int?
+
+    public init(sheet: Int? = nil) {
+        ranges = []
+        self.sheet = sheet
+    }
+
+    public func addMeasurements(height: Int, offset: CellLocation) {
+        ranges.append(
+            Range(
+                length: 8,
+                height: height,
+                offset: offset,
+                sheet: sheet
+            )
+        )
+    }
+
+    public var numberFormatRules: [NumberFormatRule] {
+        ranges.map{NumberFormatRule(range: $0)}
+    }
+}
+
+public extension Collection where Element == NumberFormatRule {
+    var asRequests: [GoogleSheetsApiRequest] {
+        self.map{
+            GoogleSheetsApiRequest.repeatCell($0)
+        }
+    }
+}
+
 public class MeagerMetricSetFormatRanges {
     private(set) var straightMetricRanges: [Range]
     private(set) var inverseMetricRanges: [Range]
