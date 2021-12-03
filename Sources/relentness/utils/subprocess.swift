@@ -32,6 +32,14 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
     return nil
 }
 
+public func runScriptAndGetOutput(_ fileName: String) throws -> String? {
+    try runSubprocessAndGetOutput(
+        path: "/bin/bash",
+        args: ["Assets/Scripts/Shell/\(fileName).sh"],
+        env: [:]
+    )
+}
+
 public func runSubprocessAndGetOutput(path: String, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
     while true { // Repeat process execution until success (testing process can be killed with kill -9 $(ps -aux | grep "python -m relentness" | grep -v "grep" | cut -d " " -f7)
         let task = Process()

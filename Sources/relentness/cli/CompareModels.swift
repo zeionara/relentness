@@ -8,7 +8,7 @@ let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
-    // ModelImpl(architecture: .complex, platform: .openke)
+    ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
@@ -127,13 +127,28 @@ public struct CompareModels: ParsableCommand {
                      .appendCells(
                          [
                              [
+                                 CellValue.string(value: "OS:"), CellValue.string(value: try! runScriptAndGetOutput("print-os-version")!)
+                             ],
+                             [
+                                 CellValue.string(value: "CPU:"), CellValue.string(value: try! runScriptAndGetOutput("print-cpu-info")!)
+                             ],
+                             [
+                                 CellValue.string(value: "RAM:"), CellValue.string(value: try! runScriptAndGetOutput("print-ram-info")!)
+                             ],
+                             [
+                                 CellValue.string(value: "GPU:"), CellValue.string(value: try! runScriptAndGetOutput("print-gpu-info")!)
+                             ],
+                             [
                                  CellValue.string(value: "Command:"), CellValue.string(value: CommandLine.arguments.joined(separator: " "))
+                             ],
+                             [
+                                 CellValue.string(value: "")
                              ]
                          ],
                          format: .bold
                      )
 
-            currentMetricsRowOffset += 1
+            currentMetricsRowOffset += 6
 
 
             // async let batchUpdateResponse = adapter?.commit(dryRun: false)
