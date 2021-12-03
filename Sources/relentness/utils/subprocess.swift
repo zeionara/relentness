@@ -1,5 +1,45 @@
 import Foundation
 
+public func runSubprocessAndGetOutput(path: String, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) throws -> String? {
+    let task = Process()
+
+    task.executableURL = URL(fileURLWithPath: path)
+    task.environment = env
+    task.arguments = args
+
+    let outputPipe = Pipe()
+    let errorPipe = Pipe()
+
+    task.standardOutput = outputPipe
+    task.standardError = errorPipe
+
+    try task.run()
+
+    if let unwrappedErrorData = try? errorPipe.fileHandleForReading.readToEnd() {
+        print(
+            String(decoding: unwrappedErrorData, as: UTF8.self)
+        )
+    }
+    let outputData = try? outputPipe.fileHandleForReading.readToEnd()
+
+    task.waitUntilExit()
+
+    if let unwrappedOutputData = outputData {
+        let output = String(decoding: unwrappedOutputData, as: UTF8.self)
+        return dropNewLine ? String(output.dropLast()) : String(output)
+    }
+
+    return nil
+}
+
+public func runScriptAndGetOutput(_ fileName: String) throws -> String? {
+    try runSubprocessAndGetOutput(
+        path: "/bin/bash",
+        args: ["Assets/Scripts/Shell/\(fileName).sh"],
+        env: [:]
+    )
+}
+
 public func runSubprocessAndGetOutput(path: String, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
     while true { // Repeat process execution until success (testing process can be killed with kill -9 $(ps -aux | grep "python -m relentness" | grep -v "grep" | cut -d " " -f7)
         let task = Process()

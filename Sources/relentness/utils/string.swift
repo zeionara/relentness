@@ -59,5 +59,24 @@ public extension String {
             print("Cannot write to file \(path) because of invalid url")
         }
     }
+
+    func namedGroup(name: String, regex: NSRegularExpression) -> String {
+        return String(
+            self[
+                Swift.Range(
+                    regex.matches(
+                        in: self,
+                        range: NSRange(
+                            self.startIndex..<self.endIndex,
+                            in: self
+                        )
+                    ).first!.range(
+                        withName: name
+                    ),
+                    in: self
+                )!
+            ]
+        )
+    }
 }
 

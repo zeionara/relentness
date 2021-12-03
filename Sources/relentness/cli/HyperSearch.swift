@@ -73,7 +73,7 @@ public struct HyperSearch: ParsableCommand {
         logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
 
         BlockingTask {
-            let sets = HyperParamSets(corpus_, model_.rawValue, path_)
+            let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
 
             for hparams in sets.storage.sets {
                 do {

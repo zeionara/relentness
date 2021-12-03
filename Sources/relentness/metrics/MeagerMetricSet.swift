@@ -20,8 +20,8 @@ private struct MeagerMetricSeriesIndexMap {
     }
 }
 
-let N_DECIMAL_PLACES = 3
-let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
+public let N_DECIMAL_PLACES = 4
+public let FLOAT_FORMAT = "%.\(N_DECIMAL_PLACES)f"
 
 infix operator +++: AdditionPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
 infix operator /++: MultiplicationPrecedence // Dot product operator which is generally defined as tensor-to-tensor multiplications
@@ -34,6 +34,17 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
     public let hitsAtTen: Double
     public let time: Double?
     public let totalTime: Double?
+
+    public enum Metric: Int {
+        case meanRank = 0
+        case meanReciprocalRank = 1
+        case hitsAtOne = 2
+        case hitsAtThree = 3
+        case hitsAtTen = 4
+        case time = 5
+        case totalTime = 6
+        case executionTime = 7
+    }
 
     fileprivate init(meanRank: Double, meanReciprocalRank: Double, hitsAtOne: Double, hitsAtThree: Double, hitsAtTen: Double, time: Double? = nil, totalTime: Double? = nil) {
         self.meanRank = meanRank
@@ -55,21 +66,43 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
         self.totalTime = nil
     }
 
+    public var descriptionItems: [CellValue] {
+        [
+            meanRank.round(places: N_DECIMAL_PLACES),
+            meanReciprocalRank.round(places: N_DECIMAL_PLACES),
+            hitsAtOne.round(places: N_DECIMAL_PLACES),
+            hitsAtThree.round(places: N_DECIMAL_PLACES),
+            hitsAtTen.round(places: N_DECIMAL_PLACES),
+            (time ?? 0.0).round(places: N_DECIMAL_PLACES),
+            (totalTime ?? time ?? 0.0).round(places: N_DECIMAL_PLACES)
+        ].map{CellValue.number(value: $0)}
+    }
+
     public var description: String {
-        "\(String(format: FLOAT_FORMAT, meanRank))\t\(String(format: FLOAT_FORMAT, meanReciprocalRank))\t" +
-        "\(String(format: FLOAT_FORMAT, hitsAtOne))\t\(String(format: FLOAT_FORMAT, hitsAtThree))\t\(String(format: FLOAT_FORMAT, hitsAtTen))\t" +
-        "\(stringifiedTime)\t\(stringifiedTotalTime)"
+        [
+            String(format: FLOAT_FORMAT, meanRank), String(format: FLOAT_FORMAT, meanReciprocalRank),
+            String(format: FLOAT_FORMAT, hitsAtOne), String(format: FLOAT_FORMAT, hitsAtThree), String(format: FLOAT_FORMAT, hitsAtTen),
+            stringifiedTime, stringifiedTotalTime
+        ].joined(separator: "\t")
+    }
+
+    public func descriptionItemsWithExecutionTime(_ executionTime: Double) -> [CellValue] {
+        descriptionItems + [CellValue.number(value: executionTime.round(places: N_DECIMAL_PLACES))]
     }
 
     public func descriptionWithExecutionTime(_ executionTime: Double) -> String {
-        "\(description)\t\(String(format: FLOAT_FORMAT, executionTime))"
+        [
+            String(format: FLOAT_FORMAT, meanRank), String(format: FLOAT_FORMAT, meanReciprocalRank),
+            String(format: FLOAT_FORMAT, hitsAtOne), String(format: FLOAT_FORMAT, hitsAtThree), String(format: FLOAT_FORMAT, hitsAtTen),
+            stringifiedTime, stringifiedTotalTime, String(format: FLOAT_FORMAT, executionTime)
+        ].joined(separator: "\t")
     }
 
     public var stringifiedTime: String {
        if let unwrappedTime = time {
-          return String(format: FLOAT_FORMAT, unwrappedTime) 
-        }
-        return "-"
+           return String(format: FLOAT_FORMAT, unwrappedTime) 
+       }
+       return "-"
     }
 
     public var unwrappedTime: Double {
@@ -93,12 +126,23 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
         return unwrappedTime
     }
 
+    private static let headerItemLabels = ["mr", "mrr", "hits@1", "hits@3", "hits@10", "time", "total-time"]
+    private static let headerItemLabelsWithExecutionTime = headerItemLabels + ["execution-time"]
+
+    public static var headerItems: [CellValue] {
+        headerItemLabels.map{CellValue.string(value: $0)}
+    }
+
     public static var header: String {
-        "mr\tmrr\thits@1\thits@3\thits@10\ttime\ttotal-time"
+        headerItemLabels.joined(separator: "\t")
+    }
+
+    public static var headerItemsWithExecutionTime: [CellValue] {
+        headerItemLabelsWithExecutionTime.map{CellValue.string(value: $0)}
     }
 
     public static var headerWithExecutionTime: String {
-        "\(header)\texecution-time"
+        headerItemLabelsWithExecutionTime.joined(separator: "\t")
     }
 
     public func weightedSum(executionTime: Double? = nil) -> Double {

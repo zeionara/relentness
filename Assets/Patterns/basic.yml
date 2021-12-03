@@ -1,0 +1,231 @@
+items:
+  - name: symmetric
+    positive: |-
+      select (count(?h) as ?count) (?r as ?relation) where {
+        ?h ?r ?t.
+        ?t ?r ?h.
+        filter(str(?h) > str(?t))
+      }
+      group by ?r
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) (?r as ?relation) where {
+        ?h ?r ?t.
+        filter ( !exists { ?t ?r ?h } )
+      }
+      group by ?r
+      order by desc(?count)
+  - name: antisymmetric
+    positive: |-
+      select (count(?h) as ?count) ?forward ?backward where {                                                                                                                                             
+        ?h ?forward ?t.                                                                                                                                                                                        
+        ?t ?backward ?h.                                                                                                                                                                                        
+        filter(str(?forward) > str(?backward))
+        filter(str(?h) > str(?t))
+      }                                                                                                                                                                                                  
+      group by ?forward ?backward                                                                                                                                                                                        
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?forward ?backward where {
+        ?h ?forward ?t.
+        filter( !exists{
+          ?t ?backward ?h.
+          filter(str(?backward) != str(?forward))
+        }).
+      }
+      group by ?forward ?backward
+      order by desc(?count)
+  - name: equivalence
+    positive: |-
+      select (count(?h) as ?count) ?primary ?secondary where {
+        ?h ?primary ?t.
+        ?h ?secondary ?t.
+        filter(str(?primary) > str(?secondary)) # filter(str(?h) > str(?t))
+      }                                                                                                                                                                                                  
+      group by ?primary ?secondary
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?primary ?secondary where {
+        ?h ?primary ?t.
+        filter( !exists{
+          ?h ?secondary ?t.
+          filter(str(?secondary) != str(?primary))
+        }).
+      }
+      group by ?primary ?secondary
+      order by desc(?count)
+  - name: implication
+    positive: |-
+      select (count(?h) as ?count) ?original ?derivative {
+        {
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          ?h ?derivative ?t.
+          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+        } union {
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          ?h ?original ?t;
+             ?derivative ?t. # original and derivative exist
+        }
+      }
+      group by ?original ?derivative
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?original ?derivative {
+        {
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          ?h ?derivative ?t.
+          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+        } union {
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          ?h ?original ?t.
+          filter(!exists{?h ?derivative ?t}). # original exists and derivative does not
+        }
+      }
+      group by ?original ?derivative
+      order by desc(?count)
+  - name: reflexive
+    positive: |-
+      select (count(?h) as ?count) ?loopback {
+        ?h ?loopback ?h
+      }
+      group by ?loopback
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?loopback {
+        {
+          ?h ?loopback ?t_.
+          filter(!exists{?h ?loopback ?h})
+        } union {
+          ?h_ ?loopback ?t.
+          filter(!exists{?t ?loopback ?t})
+        }
+      }
+      group by ?loopback
+      order by desc(?count)
+  - name: transitive
+    positive: |-
+      select (count(?h) as ?count) ?translator {
+        ?h ?translator ?t, ?n.
+        ?t ?translator ?n.
+      }
+      group by ?translator
+      order by desc(?count)
+    negative: |-
+      select (count(?h) as ?count) ?translator {
+        ?h ?translator ?t.
+        ?t ?translator ?n.
+        filter(!exists{?h ?translator ?n})
+      }
+      group by ?translator
+      order by desc(?count)
+  # - name: composition
+  #   positive: |-
+  #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
+  #       ?h ?premise ?t;
+  #          ?conclusion ?n.
+  #       ?t ?statement ?n.
+  #     }
+  #     group by ?premise ?statement ?conclusion
+  #     order by desc(?count)
+  #   negative: |-
+  #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
+  #       {
+  #         select ?premise where {
+  #           ?h_ ?premise ?t_
+  #         }
+  #         group by ?premise
+  #       }
+  #       {
+  #         select ?statement where {
+  #           ?h_ ?statement ?t_
+  #         }
+  #         group by ?statement
+  #       }
+  #       {
+  #         select ?conclusion where {
+  #           ?h_ ?conclusion ?t_
+  #         }
+  #         group by ?conclusion
+  #       }
+  #       ?h ?premise ?t.
+  #       ?t ?statement ?n.
+  #       filter(!exists{?h ?conclusion ?n})
+  #     }
+  #     group by ?premise ?statement ?conclusion
+  #     order by desc(?count)
+  #   - OR -
+  #   select (count(?h) as ?count) ?premise ?statement ?conclusion {
+  #     {
+  #       select (count(?h_) as ?count_) ?premise where {
+  #         ?h_ ?premise ?t_
+  #       }
+  #       group by ?premise
+  #       order by desc(?count_)
+  #       limit 3
+  #     }
+  #     {
+  #       select (count(?h_) as ?count__) ?statement where {
+  #         ?h_ ?statement ?t_
+  #       }
+  #       group by ?statement
+  #       order by desc(?count__)
+  #       limit 3
+  #     }
+  #     {
+  #       select (count(?h_) as ?count___) ?conclusion where {
+  #         ?h_ ?conclusion ?t_
+  #       }
+  #       group by ?conclusion
+  #       order by desc(?count___)
+  #       limit 3
+  #     }
+  #     ?h ?premise ?t.
+  #     ?t ?statement ?n.
+  #     filter(!exists{?h ?conclusion ?n})
+  #   }
+  #   group by ?premise ?statement ?conclusion
+  #   order by desc(?count)

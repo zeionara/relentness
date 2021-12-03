@@ -3,20 +3,67 @@ import ArgumentParser
 import Logging
 import wickedData
 
-enum Model: String, CaseIterable, ExpressibleByArgument {
-    case transe, complex
+// typealias ModelImpl = (architecture: Model, platform: Platform)
+
+public struct ModelImpl: CustomStringConvertible {
+    public let architecture: Model
+    public let platform: Platform
+
+    public var description: String {
+        "\(architecture)@\(platform)"
+    }
+}
+
+public enum Platform: String, CaseIterable, ExpressibleByArgument {
+    case openke, grapex
+
+    public var index: Int {
+       switch self {
+           case .grapex:  
+              return -1
+           case .openke:
+              return 0
+       }
+    }
+}
+
+public enum ModelConversionError: Error {
+   case modelIsNotImplemented(platform: Platform)
+}
+
+public enum Model: String, CaseIterable, ExpressibleByArgument {
+    case transe, complex, se
 
     public var asOpenKeModel: OpenKeModel {
-        switch self {
+        get throws {
+            switch self {
             case .transe:
                 return .transe
             case .complex:
                 return .complex
+            case .se:
+                throw ModelConversionError.modelIsNotImplemented(platform: .openke) 
+            }
+        }
+    }
+
+    public var asGrapexModel: GrapexModel {
+        get throws {
+            switch self {
+                case .transe:
+                    return .transe
+                case .se:
+                    return .se
+                case .complex:
+                    throw ModelConversionError.modelIsNotImplemented(platform: .grapex)
+            }
         }
     }
 
     public var index: Int {
        switch self {
+           case .se:
+               return -1 
            case .transe:
               return 0
            case .complex:  
