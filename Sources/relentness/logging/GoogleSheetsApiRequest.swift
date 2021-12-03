@@ -173,6 +173,7 @@ public enum GoogleSheetsApiRequest: Codable {
     case appendCells(AppendCells)
     case addConditionalFormatRule(ConditionalFormattingRule)
     case repeatCell(NumberFormatRule)
+    case emphasizeCells(CellEmphasisRule)
 
     public func encode(to encoder: Encoder) {
         var container = encoder.singleValueContainer()
@@ -186,6 +187,8 @@ public enum GoogleSheetsApiRequest: Codable {
                 try! container.encode(["addConditionalFormatRule": addFormatRuleRequest])
             case let .repeatCell(repeatCell):
                 try! container.encode(["repeatCell": repeatCell])
+            case let .emphasizeCells(emphasizeCell):
+                try! container.encode(["repeatCell": emphasizeCell])
         }
     }
 }

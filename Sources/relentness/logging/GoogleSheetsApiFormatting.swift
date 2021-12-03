@@ -169,6 +169,49 @@ public struct NumberFormatRule: Codable {
     // }
 }
 
+public struct CellEmphasisRule: Codable {
+    // public struct RepeatCell: Codable {
+    let range: Range
+    var cell: [String: [String: [String: AppendCells.Row.Value.TextFormatRun.TextFormatValue]]] = [
+        "userEnteredFormat": [
+            "textFormat": [
+                "bold": .bool(value: true)
+            ]
+        ]
+    ]
+    var fields: String = "userEnteredFormat.textFormat"
+    // }
+
+    // let range: Range
+
+    public init(range: Range) {
+        self.range = range
+    } 
+
+    public init(cell: CellLocation, sheet: Int? = nil) {
+        self.range = Range(
+            length: 1,
+            height: 1,
+            offset: cell,
+            sheet: sheet
+        )
+    }
+
+    // public func encode(to encoder: Encoder) throws {
+    //     var container = encoder.singleValueContainer()
+
+    //     try container.encode(["repeatCell": RepeatCell(range: range)])
+    // }
+}
+
+public extension Collection where Element == CellLocation {
+    func asRequests(sheet: Int? = nil) -> [GoogleSheetsApiRequest] {
+        self.map{
+            GoogleSheetsApiRequest.emphasizeCells(CellEmphasisRule(cell: $0, sheet: sheet))
+        }
+    }
+}
+
 public class MeagerMetricSetNumberFormatRanges {
     private(set) var ranges: [Range]
 

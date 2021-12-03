@@ -35,6 +35,17 @@ public struct MeagerMetricSeries: CustomStringConvertible, Sendable {
     public let time: Double?
     public let totalTime: Double?
 
+    public enum Metric: Int {
+        case meanRank = 0
+        case meanReciprocalRank = 1
+        case hitsAtOne = 2
+        case hitsAtThree = 3
+        case hitsAtTen = 4
+        case time = 5
+        case totalTime = 6
+        case executionTime = 7
+    }
+
     fileprivate init(meanRank: Double, meanReciprocalRank: Double, hitsAtOne: Double, hitsAtThree: Double, hitsAtTen: Double, time: Double? = nil, totalTime: Double? = nil) {
         self.meanRank = meanRank
         self.meanReciprocalRank = meanReciprocalRank

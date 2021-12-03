@@ -159,16 +159,28 @@ public class GoogleSheetsApiAdapter {
         return self
     }
 
-    public func addConditionalFormattingRules(_ rules: [ConditionalFormattingRule]) {
+    public func addConditionalFormattingRules(_ rules: [ConditionalFormattingRule]) -> GoogleSheetsApiAdapter {
         requests.append(
             contentsOf: rules.asRequests
         )
+
+        return self
     }
 
-    public func addNumberFormatRules(_ rules: [NumberFormatRule]) {
+    public func addNumberFormatRules(_ rules: [NumberFormatRule]) -> GoogleSheetsApiAdapter {
         requests.append(
             contentsOf: rules.asRequests
         )
+        
+        return self
+    }
+
+    public func emphasizeCells(_ cells: [CellLocation], sheet: Int? = nil) -> GoogleSheetsApiAdapter {
+        requests.append(
+            contentsOf: cells.asRequests(sheet: sheet)
+        )
+
+        return self
     }
 
     public var lastSheetId: Int {
