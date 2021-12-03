@@ -21,7 +21,7 @@ public extension Array {
         return chunks
     }
 
-    public func groups(nChunks: Int) -> [[Element]] {
+    func groups(nChunks: Int) -> [[Element]] {
         assert(0 < nChunks && nChunks <= count)
 
         let nElementsPerChunk = count / nChunks
@@ -30,7 +30,7 @@ public extension Array {
         return groups(nChunks: nChunks, nElementsPerChunk: nElementsPerChunk, nRemainingElements: nRemainingElements)
     }
 
-    public func groups(nElementsPerChunk: Int) -> [[Element]] {
+    func groups(nElementsPerChunk: Int) -> [[Element]] {
         assert(0 < nElementsPerChunk && nElementsPerChunk <= count)
 
         let nChunks = count / nElementsPerChunk

@@ -241,16 +241,6 @@ public struct HyperParamStorage: Codable {
     }
 }
 
-public extension Optional where Wrapped == Logger {
-    func error(_ message: String) {
-        if let logger = self {
-            logger.error(Logger.Message(stringLiteral: message))
-        } else {
-            print(message)
-        }
-    }
-}
-
 enum HyperParamSetsException: Error {
     case invalidFile(path: String)
 }

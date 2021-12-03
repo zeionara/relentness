@@ -78,3 +78,29 @@ public func setupLogging(path: String? = nil, verbose: Bool, discardExistingLogF
     }
 }
 
+public extension Optional where Wrapped == Logger {
+    func error(_ message: String) {
+        if let logger = self {
+            logger.error(Logger.Message(stringLiteral: message))
+        } else {
+            print(message)
+        }
+    }
+
+    func info(_ message: String) {
+        if let logger = self {
+            logger.info(Logger.Message(stringLiteral: message))
+        } else {
+            print(message)
+        }
+    }
+
+    func trace(_ message: String) {
+        if let logger = self {
+            logger.trace(Logger.Message(stringLiteral: message))
+        } else {
+            print(message)
+        }
+    }
+}
+
