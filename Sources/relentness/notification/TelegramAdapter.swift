@@ -56,7 +56,13 @@ public class TelegramAdapter {
     private var handledFirstStop: Bool
     private var tracker: ProgressTracker
 
-    public init(token: String? = nil, tracker: ProgressTracker) throws {
+    private var linkedChatIds: Set<Int64>
+
+    private var nMaxStartAttempts: Int
+    private var nWastedStartAttempts: [Int64: Int]
+    private let secret: String?
+
+    public init(token: String? = nil, tracker: ProgressTracker, nMaxStartAttempts: Int = 3, secret: String? = nil) throws {
         keepFetchingUpdates = true
         handledFirstStop = false
 
@@ -66,23 +72,72 @@ public class TelegramAdapter {
         self.bot = bot_
         self.tracker = tracker
 
+        self.nWastedStartAttempts = [Int64: Int]()
+        self.nMaxStartAttempts = nMaxStartAttempts
+        // print(secret)
+        self.secret = secret
+
+        linkedChatIds = Set<Int64>()
+
         router = Router(bot: bot_)
+       
+        if let mainChatId = ProcessInfo.processInfo.environment["EMBEDDABOT_MAIN_CHAT_ID"] {
+            linkedChatIds.insert(Int64(mainChatId)!)
+        }
 
         router["start"] = start
-        router["stop"] = stop
+        router["exit"] = exit
         router["status"] = status
-        
+        router["stop"] = stop
+    }
 
-        // router = router_
+    private func IfStarted(_ context: Context, run: () -> Bool) -> Bool {
+        if linkedChatIds.contains(context.chatId!) {
+            return run()
+        } else {
+            context.respondAsync("Only authenticated users are allowed to do this")
+            return true
+        }
     }
 
     private func start(context: Context) -> Bool {
-        context.respondAsync("Ok, let's start")
         if !handledFirstStop {
             handledFirstStop = true
         }
 
+        if linkedChatIds.contains(context.message!.from!.id) {
+            context.respondAsync("Already started")
+        } else {
+            if let _ = secret {
+                context.respondAsync("Ok, to start send me the secret")
+                nWastedStartAttempts[context.message!.from!.id] = 0
+            } else {
+                context.respondAsync("Welcome back, \(context.message!.from!.firstName)!")
+                linkedChatIds.insert(context.message!.from!.id)
+            }
+        }
+
+        // for i in 0..<N_MAX_START_ATTEMPTS {
+        //     if let message = update.message, let text = message.text, let from = message.from, text == "secret" {
+        //     } else {
+        //         bot.sendMessageAsync(
+        //             chatId: .chat(from.id),
+        //             text: "No, that wasn't correct. Please, try again"
+        //         )
+        //     }
+        //     if let update = bot.nextUpdateSync() {
+        //     }
+        // }
+
         return true
+    }
+
+    public func stop(context: Context) -> Bool {
+        IfStarted(context) {
+            linkedChatIds.remove(context.chatId!)
+            context.respondAsync("Successfully signed out")
+            return true
+        }
     }
 
     private func status(context: Context) -> Bool {
@@ -100,7 +155,7 @@ public class TelegramAdapter {
         return true
     }
 
-    private func stop(context: Context) -> Bool {
+    private func exit(context: Context) -> Bool {
         if handledFirstStop {
             context.respondSync("Bye!")
             keepFetchingUpdates = false
@@ -111,10 +166,46 @@ public class TelegramAdapter {
         return true
     }
 
+    public func broadcast(_ message: String) {
+        _ = linkedChatIds.map { chatId in
+            bot.sendMessageAsync(
+                chatId: .chat(chatId),
+                text: message,
+                parseMode: .markdown
+            )
+        }
+    }
+
     public func run() async throws {
         while keepFetchingUpdates {
             if let update = bot.nextUpdateSync() {
-                try router.process(update: update)
+                if let message = update.message, let from = message.from, let nWastedAttempts = nWastedStartAttempts[from.id] {
+                    if let message = update.message, let text = message.text, text == secret {
+                        bot.sendMessageAsync(
+                            chatId: .chat(from.id),
+                            text: "Yes, you are right. Welcome"
+                        )
+                        nWastedStartAttempts.removeValue(forKey: from.id)
+                        linkedChatIds.insert(from.id)
+                    } else {
+                        let nWastedAttemptsUpdated = nWastedAttempts + 1
+                        if nWastedAttemptsUpdated < nMaxStartAttempts {
+                            bot.sendMessageAsync(
+                                chatId: .chat(from.id),
+                                text: "No, that wasn't correct. Please, try again. You've got \(nMaxStartAttempts - nWastedAttemptsUpdated) more attempts"
+                            )
+                            nWastedStartAttempts[from.id] = nWastedAttemptsUpdated
+                        } else {
+                            bot.sendMessageAsync(
+                                chatId: .chat(from.id),
+                                text: "Unfortunately, you ran out of start attempts. Please, try again"
+                            )
+                            nWastedStartAttempts.removeValue(forKey: from.id)
+                        }
+                    }
+                } else {
+                    try router.process(update: update)
+                }
             }
             // if !keepFetchingUpdates {
             //     break

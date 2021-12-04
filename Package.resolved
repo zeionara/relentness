@@ -6,7 +6,7 @@
         "repositoryURL": "https://github.com/zeionara/ahsheet.git",
         "state": {
           "branch": "oauth",
-          "revision": "db5065989401eee67815e64040641b0c775a3f60",
+          "revision": "898894e6dccd728c1c8b8d1800cc574e41cc6e7a",
           "version": null
         }
       },
@@ -33,7 +33,7 @@
         "repositoryURL": "https://github.com/zeionara/google-auth-library-swift",
         "state": {
           "branch": "master",
-          "revision": "dd399a69d232c28df45431a4fd3bcd86f11d7d28",
+          "revision": "ccc4081165f41ce4465ca89ebfc6041608ff8964",
           "version": null
         }
       },

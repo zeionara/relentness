@@ -7,7 +7,7 @@ import ahsheet
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
-    ModelImpl(architecture: .transe, platform: .openke),
+    // ModelImpl(architecture: .transe, platform: .openke),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -101,12 +101,16 @@ public struct CompareModels: ParsableCommand {
         let dryRun_ = dryRun
 
         BlockingTask {
-            let adapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter() : nil
-
             let tracker = ProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
-            let telegramBot = try! TelegramAdapter(tracker: tracker)
+            let telegramBot = try! TelegramAdapter(tracker: tracker, secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"])
 
-            async let void = await telegramBot.run()
+            async let void: () = await telegramBot.run()
+
+            Task {
+                telegramBot.broadcast("The bot has started")
+            }
+
+            let adapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
 
             // print("foo")
 
@@ -144,10 +148,6 @@ public struct CompareModels: ParsableCommand {
 
             var hparams = [String: HyperParamSet]()
             let nTunableHparams = HyperParamSet.headerItems.count
-            var startedTelegramBot = false
-            // var isFirstModel = true
-            // var tracker: ProgressTracker? = nil
-            // var telegramBot: TelegramAdapter? = nil
 
             for model in MODELS_FOR_COMPARISON {
                 logger.info("Testing model \(model)...")
@@ -193,8 +193,9 @@ public struct CompareModels: ParsableCommand {
                 // }
 
                 // if isFirstModel {
-                async let void = tracker.setNhyperParameterSets(sets.storage.sets.count)
-                // }
+                Task {
+                    await tracker.setNhyperParameterSets(sets.storage.sets.count)
+                }
 
                 print("Add measurements for the conditional format ranges")
 
@@ -275,7 +276,7 @@ public struct CompareModels: ParsableCommand {
                     //     async let result = unwrappedTracker.nextHyperParameterSet()
                     // }
                     Task {
-                        try! await tracker.nextHyperParameterSet()
+                        await tracker.nextHyperParameterSet()
                     }
                 }
 

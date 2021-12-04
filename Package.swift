@@ -10,6 +10,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/zeionara/wicked-data", branch: "master"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6"),
+        // .package(url: "/home/zeio/ahsheet", .branch("oauth")),
         .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth")),
         .package(url: "https://github.com/zmeyc/telegram-bot-swift.git", from: "2.0.0")
         // .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth"))
