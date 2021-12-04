@@ -42,5 +42,5 @@ The applications allows to export results of models comparison into google sprea
 
 It is possible to interact with the application via telegram bot. Upon startup you are able to provide any access token and fine-tune the app to send a wide range of notifications, the most interesting of which is the message that informs you about the need of updating OAuth2 access token to a third-party service. On the screen below an example of a short chat with telegram bot is provided.
 
-![embeddabot chat screenshot example](images/embeddabot-screenshot.png)
+![embeddabot chat screenshot example](images/embeddabot-screenshot.jpg)
 
