@@ -141,29 +141,33 @@ public class TelegramAdapter {
     }
 
     private func status(context: Context) -> Bool {
-        Task {
-            context.respondAsync("\(context.update.message!.from!.firstName), \(await self.tracker.getNprocessedModels()) / \(self.tracker.nModels) models and " +
-                                 "\(await self.tracker.getNprocessedHyperParameterSets()) / \(await self.tracker.getNhyperParameterSets()) hyperparameters sets for the " +
-                                 "\((await self.tracker.getNprocessedModels()) + 1) model handled"
-            )
-        }
+        IfStarted(context) {
+            Task {
+                context.respondAsync("\(context.update.message!.from!.firstName), \(await self.tracker.getNprocessedModels()) / \(self.tracker.nModels) models and " +
+                                     "\(await self.tracker.getNprocessedHyperParameterSets()) / \(await self.tracker.getNhyperParameterSets()) hyperparameters sets for the " +
+                                     "\((await self.tracker.getNprocessedModels()) + 1) model handled"
+                )
+            }
 
-        if !handledFirstStop {
-            handledFirstStop = true
-        }
+            if !handledFirstStop {
+                handledFirstStop = true
+            }
 
-        return true
+            return true
+        }
     }
 
     private func exit(context: Context) -> Bool {
-        if handledFirstStop {
-            context.respondSync("Bye!")
-            keepFetchingUpdates = false
-        } else {
-            handledFirstStop = true
-        }
+        IfStarted(context) {
+            if handledFirstStop {
+                context.respondSync("Bye!")
+                keepFetchingUpdates = false
+            } else {
+                handledFirstStop = true
+            }
 
-        return true
+            return true
+        }
     }
 
     public func broadcast(_ message: String) {

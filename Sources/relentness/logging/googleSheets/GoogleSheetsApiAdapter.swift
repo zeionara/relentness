@@ -14,11 +14,14 @@ public class GoogleSheetsApiAdapter {
     var nextSheetSuffix: Int? = nil
     private var spreadsheetMetaCache: SpreadsheetMeta? = nil
     private var telegramBot: TelegramAdapter? = nil
+    private var hostnameCache: String? = nil
 
     public init(sheet: String? = "sheets-adapter-testing", initialSheetId: Int? = nil, telegramBot: TelegramAdapter? = nil) throws {
-        sessionWrapper = try! GoogleSheetsApiAdapter.makeSessionWrapper(telegramBot: telegramBot)
+        let hostnameCache = "\(ProcessInfo.processInfo.environment["USER"]!)\(try! runScriptAndGetOutput("print-host-info")!)"
+        self.hostnameCache = hostnameCache
+        sessionWrapper = try! GoogleSheetsApiAdapter.makeSessionWrapper(telegramBot: telegramBot, hostname: hostnameCache)
         // nextCell = Address(row: 0, column: 0, sheet: sheet) 
-        let spreadsheetMetaCache = try! GoogleSheetsApiAdapter.fetchMeta(sessionWrapper, telegramBot: telegramBot)
+        let spreadsheetMetaCache = try! GoogleSheetsApiAdapter.fetchMeta(sessionWrapper, telegramBot: telegramBot, hostname: hostnameCache)
         self.spreadsheetMetaCache = spreadsheetMetaCache
         self.nextSheetId = initialSheetId ?? (spreadsheetMetaCache.sheets.map{$0.id}.max()! + 1)
         self.requests = [GoogleSheetsApiRequest]()
@@ -56,38 +59,36 @@ public class GoogleSheetsApiAdapter {
             return nil
         }
 
-        return try GoogleSheetsApiAdapter.batchUpdate(
-            sessionWrapper,
-            telegramBot: telegramBot,
-            request: encodedRequest
+        return try batchUpdate(
+            encodedRequest
         )
     }
 
-    private static func makeTelegramNotificationCallback(_ bot: TelegramAdapter) -> BrowserTokenProvider.SignInCallback {
+    private static func makeTelegramNotificationCallback(_ bot: TelegramAdapter, hostname: String = "<undefined host>") -> BrowserTokenProvider.SignInCallback {
         return { url in
-            bot.broadcast("Please, update token using this [url](\(String(describing: url!)))")
+            bot.broadcast("Please, update token using this [url](\(String(describing: url!))) on \(hostname)")
         }
     }
 
-    private static func fetchMeta(_ sessionWrapper: GoogleApiSessionWrapper, telegramBot: TelegramAdapter? = nil) throws -> SpreadsheetMeta {
+    private static func fetchMeta(_ sessionWrapper: GoogleApiSessionWrapper, telegramBot: TelegramAdapter? = nil, hostname: String) throws -> SpreadsheetMeta {
         if let bot = telegramBot {
-            return try sessionWrapper.getSpreadsheetMeta(callback: makeTelegramNotificationCallback(bot))
+            return try sessionWrapper.getSpreadsheetMeta(callback: makeTelegramNotificationCallback(bot, hostname: hostname))
         } else {
             return try sessionWrapper.getSpreadsheetMeta()
         }
     }
 
-    private static func batchUpdate(_ sessionWrapper: GoogleApiSessionWrapper, telegramBot: TelegramAdapter? = nil, request: Data) throws -> Data? {
+    private func batchUpdate(_ request: Data) throws -> Data? {
         if let bot = telegramBot {
-            return try sessionWrapper.batchUpdate(request, callback: makeTelegramNotificationCallback(bot))
+            return try sessionWrapper.batchUpdate(request, callback: GoogleSheetsApiAdapter.makeTelegramNotificationCallback(bot, hostname: hostname))
         } else {
             return try sessionWrapper.batchUpdate(request)
         }
     }
 
-    private static func makeSessionWrapper(telegramBot: TelegramAdapter? = nil) throws -> GoogleApiSessionWrapper {
+    private static func makeSessionWrapper(telegramBot: TelegramAdapter? = nil, hostname: String) throws -> GoogleApiSessionWrapper {
         if let bot = telegramBot {
-            return try GoogleApiSessionWrapper(callback: makeTelegramNotificationCallback(bot))
+            return try GoogleApiSessionWrapper(callback: makeTelegramNotificationCallback(bot, hostname: hostname))
         } else {
             return try GoogleApiSessionWrapper()
         }
@@ -97,9 +98,19 @@ public class GoogleSheetsApiAdapter {
         if let cache = spreadsheetMetaCache, forcePull == false {
             return cache
         } else {
-            let cache = try! GoogleSheetsApiAdapter.fetchMeta(sessionWrapper, telegramBot: telegramBot)
+            let cache = try! GoogleSheetsApiAdapter.fetchMeta(sessionWrapper, telegramBot: telegramBot, hostname: hostname)
             spreadsheetMetaCache = cache
             return cache
+        }
+    }
+
+    private var hostname: String {
+        if let hostname = hostnameCache {
+            return hostname
+        } else {
+            let hostname = "\(ProcessInfo.processInfo.environment["USER"]!)\(try! runScriptAndGetOutput("print-host-info")!)"// try! runScriptAndGetOutput("print-host-info")!
+            hostnameCache = hostname
+            return hostname
         }
     }
 }

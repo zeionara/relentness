@@ -7,7 +7,7 @@ import ahsheet
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
-    // ModelImpl(architecture: .transe, platform: .openke),
+    ModelImpl(architecture: .transe, platform: .openke),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -171,6 +171,7 @@ public struct CompareModels: ParsableCommand {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
 
+                telegramBot.broadcast("Testing model \(model) on \(sets.storage.sets.count) hyperparameter sets...")
 
                 // if !startedTelegramBot {
                 //     print("Starting telegram bot...")
@@ -318,6 +319,8 @@ public struct CompareModels: ParsableCommand {
                 }
             }
 
+            telegramBot.broadcast("Completed testing models")
+
             var collectedModelValidationResults = [ModelTestingResult]()
 
             logger.info("Results of models validation: ")
@@ -443,6 +446,8 @@ public struct CompareModels: ParsableCommand {
                 logger.trace(Logger.Message(stringLiteral: "Google sheets api response: "))
                 logger.trace(Logger.Message(stringLiteral: String(data: unwrappedResponse, encoding: .utf8)!))
             }
+
+            telegramBot.broadcast("Completed comparing models")
         } // Blocking task
     } // run
 } // CompareModels
