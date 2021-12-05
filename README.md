@@ -32,3 +32,15 @@ python -m relentness test ./Assets/Corpora/Demo/0000 -m transe
 
 Aside from `transe` there is a `complex` model supported as well at the moment which requires a similar call.
 
+# Integrations
+
+## Google sheets
+
+The applications allows to export results of models comparison into google spreadsheet with nice formatting which automatically highlights all the main points.
+
+## Telegram API
+
+It is possible to interact with the application via telegram bot. Upon startup you are able to provide any access token and fine-tune the app to send a wide range of notifications, the most interesting of which is the message that informs you about the need of updating OAuth2 access token to a third-party service. On the screen below an example of a short chat with telegram bot is provided.
+
+![embeddabot chat screenshot example](images/embeddabot-screenshot.jpg)
+
