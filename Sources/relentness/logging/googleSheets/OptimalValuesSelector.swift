@@ -1,3 +1,5 @@
+import wickedData
+
 public extension Collection where Element == ModelTestingResult {
     func getOptimalValueLocations(offset: CellLocation = CellLocation(row: 0, column: 0)) -> [CellLocation] {
         var optimalValues = (
@@ -108,3 +110,79 @@ public extension Collection where Element == ModelTestingResult {
     }
 }
 
+typealias DatasetTestingResult = [PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric: Double]
+
+public enum OptimizationPath {
+    case up, down
+}
+
+extension Collection where Element == DatasetTestingResult {
+    func getOptimalValueLocations(offset: CellLocation = CellLocation(row: 0, column: 0)) -> [CellLocation] {
+        var optimalValues: [PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric: Double] = [ // TODO: Rename to initialValues
+            .positiveRatio: -Double.infinity,
+            .negativeRatio: -Double.infinity,
+            .positiveNormalizedRatio: -Double.infinity,
+            .negativeNormalizedRatio: -Double.infinity,
+            .relativeRatio: -Double.infinity,
+            .nPositiveOccurrences: -Double.infinity,
+            .nNegativeOccurrences: -Double.infinity,
+            .nTriples: -Double.infinity,
+            .executionTime: Double.infinity
+        ]
+        var optimalValueIndices: [PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric: [Int]] = [
+            .positiveRatio: [Int](),
+            .negativeRatio: [Int](),
+            .positiveNormalizedRatio: [Int](),
+            .negativeNormalizedRatio: [Int](),
+            .relativeRatio: [Int](),
+            .nPositiveOccurrences: [Int](),
+            .nNegativeOccurrences: [Int](),
+            .nTriples: [Int](),
+            .executionTime: [Int]()
+        ]
+        let optimizationPaths = Dictionary(
+            uniqueKeysWithValues: optimalValues.map { metric, value in
+                (metric, value == Double.infinity ? OptimizationPath.down : OptimizationPath.up)
+            }
+        )
+        // [PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric: OptimizationPath] = [
+        //     .positiveRatio: .up,
+        //     .negativeRatio: .up,
+        //     .positiveNormalizedRatio: .up,
+        //     .negativeNormalizedRatio: .up,
+        //     .relativeRatio: .up,
+        //     .nPositiveOccurrences: .up,
+        //     .nNegativeOccurrences: .up,
+        //     .nTriples: .up,
+        //     .executionTime: .down
+        // ]
+
+        for (i, testingResult) in self.enumerated() {
+            for metric in PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric.allCases {
+                if ((testingResult[metric]! > optimalValues[metric]! && optimizationPaths[metric]! == .up) || (testingResult[metric]! < optimalValues[metric]! && optimizationPaths[metric]! == .down)) {
+                    optimalValues[metric] = testingResult[metric]!
+                    optimalValueIndices[metric] = [i]
+                } else if testingResult[metric] == optimalValues[metric]! {
+                    optimalValueIndices[metric]!.append(i)
+                }
+            }
+        }
+
+        // print(optimalValueIndices)
+
+        var optimalValueCellLocations = [CellLocation]()
+
+
+        for (i, metric) in PatternStats<CountableBindingTypeWithOneRelationAggregation>.Metric.allCases.enumerated() {
+            if optimalValueIndices[metric]!.count < count {
+                optimalValueCellLocations.append(
+                    contentsOf: optimalValueIndices[metric]!.map{
+                        CellLocation(row: offset.row + $0, column: offset.column + i)
+                    }
+                )
+            }
+        }
+
+        return optimalValueCellLocations
+    }
+}

@@ -20,7 +20,7 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     DatasetImpl(name: .demo, path: "Demo/0000"),
-    // DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
+    DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -97,6 +97,7 @@ public struct CompareDatasets: ParsableCommand {
 
             let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: nil) : nil
             var currentMetricsRowOffset = 0
+            var nPatterns = 0
 
             func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
                 if let unwrappedAdapter = googleSheetsAdapter {
@@ -106,6 +107,7 @@ public struct CompareDatasets: ParsableCommand {
                         ]
                     )
                     currentMetricsRowOffset += 1
+                    nPatterns += 1
                 }
             }
 
@@ -135,9 +137,12 @@ public struct CompareDatasets: ParsableCommand {
                     format: .bold
                 )
 
+            let numberFormatRanges = googleSheetsAdapter == nil ? nil : DatasetCompatisonNumberFormatRanges(sheet: googleSheetsAdapter!.lastSheetId)
+
             currentMetricsRowOffset += 6
 
             for dataset in DATASETS_FOR_COMPARISON {
+                nPatterns = 0
                 logger.info("Evaluating dataset \(dataset.name)...")
                 logger.info("Cleaning the knowledge base...")
                 let clearResponse = try! await adapter.clear()
@@ -152,6 +157,7 @@ public struct CompareDatasets: ParsableCommand {
                     ],
                     format: .bold
                 )
+                currentMetricsRowOffset += 1
 
                 // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
                 if let unwrappedBatchSize = batchSize_ {
@@ -220,35 +226,44 @@ public struct CompareDatasets: ParsableCommand {
                 )
                 currentMetricsRowOffset += 1
 
+                var datasetTestingResults = [DatasetTestingResult]()
+
                 for pattern in patterns.storage.elements {
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "symmetric")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
                             let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "antisymmetric")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
                             let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "equivalence")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("equivalence\t\(stats)")
                         case "implication":
                             let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "implication")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("implication\t\(stats)")
                         case "reflexive":
                             let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "reflexive")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("reflexive\t\(stats)")
                         case "transitive":
                             let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "transitive")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("transitive\t\(stats)")
                         case "composition":
                             let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter) 
                             try! appendStatCells(stats, pattern: "composition")
+                            datasetTestingResults.append(stats.asDict)
                             logger.info("composition\t\(stats)")
                         case let patternName:
                             print("Unsupported pattern \(patternName)") 
@@ -260,10 +275,94 @@ public struct CompareDatasets: ParsableCommand {
                         [CellValue.string(value: "")]
                     ]
                 )
+
+                // let offset = CellLocation(row: currentMetricsRowOffset, column: 1)
+                _ = googleSheetsAdapter?.addConditionalFormatRules(
+                    [
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 2,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 1
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            )
+                        ),
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 2,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 3
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            )
+                        ),
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 1,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 5
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            )
+                        ),
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 2,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 6
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            )
+                        ),
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 1,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 8
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            )
+                        ),
+                        ConditionalFormatRule(
+                            range: Range(
+                                length: 1,
+                                height: nPatterns,
+                                offset: CellLocation(
+                                    row: currentMetricsRowOffset - nPatterns,
+                                    column: 9
+                                ),
+                                sheet: googleSheetsAdapter!.lastSheetId
+                            ),
+                            inverse: true
+                        )
+                    ]
+                )
+
+                numberFormatRanges?.addMeasurements(height: nPatterns, offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1))
+
+                if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
+                    _ = unwrappedAdapter.emphasizeCells(
+                        datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)),
+                        sheet: unwrappedAdapter.lastSheetId
+                    )
+                }
+
                 currentMetricsRowOffset += 1
             }
             // print("There are \(try! await adapter.sample(countSymmetricPairs).count) symmetric relation pair instances in the knowledge base")
 
+            _ = googleSheetsAdapter?.addNumberFormatRules(numberFormatRanges!.numberFormatRules)
             _ = try! await googleSheetsAdapter?.commit(dryRun: dryRun_)
         } // BlockingTask
     }

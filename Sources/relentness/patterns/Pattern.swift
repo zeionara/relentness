@@ -90,7 +90,7 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
     let nDecimalPlaces: Int = 3
     let executionTime: Double
 
-    private enum Metric: String, CaseIterable {
+    enum Metric: String, CaseIterable {
         case positiveRatio = "positive-ratio"
         case negativeRatio = "negative-ratio"
         case positiveNormalizedRatio = "positive-normalized-ratio"
@@ -157,6 +157,25 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
 
     public static var headerItems: [CellValue] {
         Metric.allCases.map{ CellValue.string(value: $0.rawValue) }
+    }
+
+    var asDict: DatasetTestingResult {
+        let positiveCount = positiveSample.count(threshold)
+        let negativeCount = negativeSample.count(threshold)
+        let totalCount = totalSample.count
+        let normalizingCount = positiveCount + negativeCount
+
+        return [
+            .positiveRatio: Double(positiveCount) / Double(totalCount),
+            .negativeRatio: Double(negativeCount) / Double(totalCount),
+            .positiveNormalizedRatio: Double(positiveCount) / Double(normalizingCount),
+            .negativeNormalizedRatio: Double(negativeCount) / Double(normalizingCount),
+            .relativeRatio: Double(positiveCount) / Double(negativeCount),
+            .nPositiveOccurrences: Double(positiveCount),
+            .nNegativeOccurrences: Double(negativeCount),
+            .nTriples: Double(totalCount),
+            .executionTime: executionTime
+        ]
     }
 }
 
