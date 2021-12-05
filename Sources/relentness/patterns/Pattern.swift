@@ -57,11 +57,26 @@ public struct Pattern: Codable {
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
 
-        PatternStats(
-            positiveSample: try await getPositiveSample(adapter),
-            negativeSample: try await getNegativeSample(adapter),
-            totalSample: try await getTotalSample(adapter)
-        )
+        try await measureExecutionTime {
+            (
+                positive: try await getPositiveSample(adapter),
+                negative: try await getNegativeSample(adapter),
+                total: try await getTotalSample(adapter)
+            )
+        } handleExecutionTimeMeasurement: { (samples, executionTime) in
+            PatternStats(
+                positiveSample: samples.positive,
+                negativeSample: samples.negative,
+                totalSample: samples.total,
+                executionTime: executionTime
+            )
+        }
+
+        // PatternStats(
+        //     positiveSample: try await getPositiveSample(adapter),
+        //     negativeSample: try await getNegativeSample(adapter),
+        //     totalSample: try await getTotalSample(adapter)
+        // )
     }
 } 
 
@@ -71,6 +86,7 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
     let totalSample: Sample<CountingQuery.BindingType>
     let threshold: Double = 0.5
     let nDecimalPlaces: Int = 3
+    let executionTime: Double
 
     private func stringifyDouble(_ value: Double) -> String {
         String(format: "%.\(nDecimalPlaces)f", value)
@@ -89,11 +105,13 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
         let positiveNormalizedRatio = normalizingCount == 0 ? "-" : stringifyDouble(Double(positiveCount) / Double(normalizingCount))
         let negativeNormalizedRatio = normalizingCount == 0 ? "-" : stringifyDouble(Double(negativeCount) / Double(normalizingCount))
 
-        return "\(positiveRatio)\t\(negativeRatio)\t\(positiveNormalizedRatio)\t\(negativeNormalizedRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)"
+        let executionTime = stringifyDouble(executionTime)
+
+        return "\(positiveRatio)\t\(negativeRatio)\t\(positiveNormalizedRatio)\t\(negativeNormalizedRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)\t\(executionTime)"
     }
 
     public static var header: String {
-        "positive-ratio\tnegative-ratio\tpositive-normalized-ratio\tnegative-normalized-ratio\trelative-ratio\tn-positive-occurrences\tn-negative-occurrences\tn-triples"
+        "positive-ratio\tnegative-ratio\tpositive-normalized-ratio\tnegative-normalized-ratio\trelative-ratio\tn-positive-occurrences\tn-negative-occurrences\tn-triples\texecition-time"
     }
 }
 

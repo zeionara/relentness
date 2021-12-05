@@ -19,6 +19,9 @@ public struct EvaluateDataset: ParsableCommand {
     @Option(name: .shortAndLong, help: "Name of file with patten definitions")
     var patternsPath: String
 
+    @Option(name: .long, help: "Ip address of the running blazegraph server")
+    var blazegraphHost: String
+
     @Option(name: .shortAndLong, help: "Number of statements per query for updating the knowledge base")
     var batchSize: Int?
 
@@ -39,6 +42,7 @@ public struct EvaluateDataset: ParsableCommand {
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        let blazegraphHost_ = blazegraphHost
         
         if let unwrappedCorpus = corpus {
             var batches = ["train2id"]
@@ -55,6 +59,8 @@ public struct EvaluateDataset: ParsableCommand {
 
             // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
             BlockingTask {
+                let adapter = BlazegraphAdapter(address: blazegraphHost_)
+                print(try! await adapter.clear())
                 // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
                 if let unwrappedBatchSize = batchSize_ {
                     let ttls = OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: unwrappedBatchSize)
@@ -62,8 +68,8 @@ public struct EvaluateDataset: ParsableCommand {
                     for i in 0..<ttls.count {
                         print("Inserting \(i + 1) batch...")
                         print(
-                            try! await BlazegraphAdapter(address: "25.109.46.115").update( 
-                                UpdateQuery(
+                            try! await adapter.insert( 
+                                InsertQuery(
                                     text: ttls[i]
                                 ) // ,
                                 // timeout: 3_600_000
@@ -73,8 +79,8 @@ public struct EvaluateDataset: ParsableCommand {
                     print("Finished knowledge base update")
                 } else {
                     print(
-                        try! await BlazegraphAdapter(address: "25.109.46.115").update(
-                            UpdateQuery(
+                        try! await adapter.insert(
+                            InsertQuery(
                                 text: OpenKEImporter(unwrappedCorpus, batches: batches).asTtl
                             ),
                             timeout: 3_600_000
@@ -108,7 +114,7 @@ public struct EvaluateDataset: ParsableCommand {
             //     """
             // )
 
-            let adapter = BlazegraphAdapter(address: "25.109.46.115")
+            let adapter = BlazegraphAdapter(address: blazegraphHost_)
 
             // let nSymmetricTriples = try! await adapter.sample(countSymmetricPairs).count
             // let nAsymmetricTriples = try! await adapter.sample(countAsymmetricTriples).count
