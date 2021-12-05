@@ -7,7 +7,7 @@ public enum Dataset: String {
     case demo, wordnet_11
 }
 
-public struct DatasetImpl {
+public struct DatasetImpl: CustomStringConvertible {
     public let name: Dataset
     public let path: String
 
@@ -20,7 +20,7 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     DatasetImpl(name: .demo, path: "Demo/0000"),
-    DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
+    // DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -52,6 +52,12 @@ public struct CompareDatasets: ParsableCommand {
     @Flag(name: .long, help: "Include triples from the validation batch into the evaluation process")
     var validationSubset = false
 
+    @Flag(name: .long, help: "Write results to google sheets")
+    var exportToGoogleSheets = false
+
+    @Flag(name: .long, help: "Print request body instead of exporing comparison results")
+    var dryRun = false
+
     public static var configuration = CommandConfiguration(
         commandName: "compare-datasets",
         abstract: "Evaluate datasets by checking which graph patterns are present in their structure"
@@ -59,10 +65,13 @@ public struct CompareDatasets: ParsableCommand {
 
     public init() {}
 
+
     mutating public func run() {
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        logger.trace("Executing command \(CommandLine.arguments.joined(separator: " "))...")
+
         let blazegraphHost_ = blazegraphHost
         
         // if let unwrappedCorpus = corpus {
@@ -78,11 +87,55 @@ public struct CompareDatasets: ParsableCommand {
 
         let batchSize_ = batchSize
         let patternsPath_ = patternsPath
+        let exportToGoogleSheets_ = exportToGoogleSheets
+        let dryRun_ = dryRun
 
         // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
         BlockingTask {
             let adapter = BlazegraphAdapter(address: blazegraphHost_)
             let patterns = Patterns(patternsPath_)
+
+            let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: nil) : nil
+            var currentMetricsRowOffset = 0
+
+            func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
+                if let unwrappedAdapter = googleSheetsAdapter {
+                    _ = try unwrappedAdapter.appendCells(
+                        [
+                            [CellValue.string(value: pattern)] + stats.descriptionItems
+                        ]
+                    )
+                    currentMetricsRowOffset += 1
+                }
+            }
+
+            _ = try! googleSheetsAdapter?
+                .addSheet(tabColor: "e67c73") // soft red
+                .appendCells(
+                    [
+                        [
+                            CellValue.string(value: "OS:"), CellValue.string(value: try! runScriptAndGetOutput("print-os-version")!)
+                        ],
+                        [
+                            CellValue.string(value: "CPU:"), CellValue.string(value: try! runScriptAndGetOutput("print-cpu-info")!)
+                        ],
+                        [
+                            CellValue.string(value: "RAM:"), CellValue.string(value: try! runScriptAndGetOutput("print-ram-info")!)
+                        ],
+                        [
+                            CellValue.string(value: "GPU:"), CellValue.string(value: try! runScriptAndGetOutput("print-gpu-info")!)
+                        ],
+                        [
+                            CellValue.string(value: "Command:"), CellValue.string(value: CommandLine.arguments.joined(separator: " "))
+                        ],
+                        [
+                            CellValue.string(value: "")
+                        ]
+                    ],
+                    format: .bold
+                )
+
+            currentMetricsRowOffset += 6
 
             for dataset in DATASETS_FOR_COMPARISON {
                 logger.info("Evaluating dataset \(dataset.name)...")
@@ -90,6 +143,16 @@ public struct CompareDatasets: ParsableCommand {
                 let clearResponse = try! await adapter.clear()
                 logger.trace(Logger.Message(stringLiteral: String(describing: clearResponse)))
                 logger.info("Filling the knowledge base with required data...")
+
+                _ = try! googleSheetsAdapter?.appendCells(
+                    [
+                        [
+                            CellValue.string(value: "Evaluating dataset \(dataset)...")
+                        ]
+                    ],
+                    format: .bold
+                )
+
                 // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
                 if let unwrappedBatchSize = batchSize_ {
                     let ttls = OpenKEImporter(dataset.path, batches: batches).asTtls(batchSize: unwrappedBatchSize)
@@ -149,35 +212,59 @@ public struct CompareDatasets: ParsableCommand {
             // print("Handling patterns...")
 
                 logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
+
+                _ = try! googleSheetsAdapter?.appendCells(
+                    [
+                        [CellValue.string(value: "pattern")] + PatternStats<CountableBindingTypeWithOneRelationAggregation>.headerItems
+                    ]
+                )
+                currentMetricsRowOffset += 1
+
                 for pattern in patterns.storage.elements {
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "symmetric")
                             logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
                             let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "antisymmetric")
                             logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
                             let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "equivalence")
                             logger.info("equivalence\t\(stats)")
                         case "implication":
                             let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "implication")
                             logger.info("implication\t\(stats)")
                         case "reflexive":
                             let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "reflexive")
                             logger.info("reflexive\t\(stats)")
                         case "transitive":
                             let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "transitive")
                             logger.info("transitive\t\(stats)")
                         case "composition":
                             let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter) 
+                            try! appendStatCells(stats, pattern: "composition")
                             logger.info("composition\t\(stats)")
                         case let patternName:
                             print("Unsupported pattern \(patternName)") 
                     }
                 }
+
+                _ = try! googleSheetsAdapter?.appendCells( // Empty line for visual separation of adjacent dataset testing results
+                    [
+                        [CellValue.string(value: "")]
+                    ]
+                )
+                currentMetricsRowOffset += 1
             }
             // print("There are \(try! await adapter.sample(countSymmetricPairs).count) symmetric relation pair instances in the knowledge base")
+
+            _ = try! await googleSheetsAdapter?.commit(dryRun: dryRun_)
         } // BlockingTask
     }
 }

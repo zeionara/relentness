@@ -80,6 +80,8 @@ public struct Pattern: Codable {
     }
 } 
 
+let NO_CELL_VALUE = CellValue.string(value: "-")
+
 public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: CustomStringConvertible {
     let positiveSample: Sample<BindingType>
     let negativeSample: Sample<BindingType>
@@ -87,6 +89,18 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
     let threshold: Double = 0.5
     let nDecimalPlaces: Int = 3
     let executionTime: Double
+
+    private enum Metric: String, CaseIterable {
+        case positiveRatio = "positive-ratio"
+        case negativeRatio = "negative-ratio"
+        case positiveNormalizedRatio = "positive-normalized-ratio"
+        case negativeNormalizedRatio = "negative-normalized-ratio"
+        case relativeRatio = "relative-ratio"
+        case nPositiveOccurrences = "n-positive-occurrences"
+        case nNegativeOccurrences = "n-negative-occurrences"
+        case nTriples = "n-triples"
+        case executionTime = "execution-time"
+    }
 
     private func stringifyDouble(_ value: Double) -> String {
         String(format: "%.\(nDecimalPlaces)f", value)
@@ -110,8 +124,39 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
         return "\(positiveRatio)\t\(negativeRatio)\t\(positiveNormalizedRatio)\t\(negativeNormalizedRatio)\t\(relativeRatio)\t\(positiveCount)\t\(negativeCount)\t\(totalCount)\t\(executionTime)"
     }
 
+    public var descriptionItems: [CellValue] {
+        let positiveCountRaw = positiveSample.count(threshold)
+        let positiveCount = CellValue.number(value: Double(positiveCountRaw))
+
+        let negativeCountRaw = negativeSample.count(threshold)
+        let negativeCount = CellValue.number(value: Double(negativeCountRaw))
+
+        let totalCountRaw = totalSample.count 
+        let totalCount = CellValue.number(value: Double(totalCountRaw))
+
+        let normalizingCountRaw = positiveCountRaw + negativeCountRaw
+        // let normalizingCount = CellValue.number(value: Double(normalizingCountRaw))
+
+        let positiveRatio = totalCountRaw == 0 ? NO_CELL_VALUE : CellValue.number(value: Double(positiveCountRaw) / Double(totalCountRaw))
+        let negativeRatio = totalCountRaw == 0 ? NO_CELL_VALUE : CellValue.number(value: Double(negativeCountRaw) / Double(totalCountRaw))
+        let relativeRatio = negativeCountRaw == 0 ? NO_CELL_VALUE : CellValue.number(value: Double(positiveCountRaw) / Double(negativeCountRaw))
+
+        let positiveNormalizedRatio = normalizingCountRaw == 0 ? NO_CELL_VALUE : CellValue.number(value: Double(positiveCountRaw) / Double(normalizingCountRaw))
+        let negativeNormalizedRatio = normalizingCountRaw == 0 ? NO_CELL_VALUE : CellValue.number(value: Double(negativeCountRaw) / Double(normalizingCountRaw))
+
+        let executionTime = CellValue.number(value: executionTime)
+
+        return [
+            positiveRatio, negativeRatio, positiveNormalizedRatio, negativeNormalizedRatio, relativeRatio, positiveCount, negativeCount, totalCount, executionTime
+        ]
+    }
+
     public static var header: String {
-        "positive-ratio\tnegative-ratio\tpositive-normalized-ratio\tnegative-normalized-ratio\trelative-ratio\tn-positive-occurrences\tn-negative-occurrences\tn-triples\texecition-time"
+        Metric.allCases.map{ $0.rawValue }.joined(separator: "\t")
+    }
+
+    public static var headerItems: [CellValue] {
+        Metric.allCases.map{ CellValue.string(value: $0.rawValue) }
     }
 }
 
