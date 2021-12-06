@@ -84,10 +84,10 @@
       },
       {
         "package": "wickedData",
-        "repositoryURL": "https://github.com/zeionara/wicked-data",
+        "repositoryURL": "/home/zeio/wicked-data",
         "state": {
           "branch": "master",
-          "revision": "2fa2b6fb11f72d37d5cc02841863e32911addd65",
+          "revision": "ab132323cf651989d2f41f5973d504baf1ea6e84",
           "version": null
         }
       },

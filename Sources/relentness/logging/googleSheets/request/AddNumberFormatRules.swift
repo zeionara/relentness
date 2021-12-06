@@ -26,6 +26,32 @@ public class MeagerMetricSetNumberFormatRanges {
     }
 }
 
+public class DatasetCompatisonNumberFormatRanges {
+    private(set) var ranges: [Range]
+
+    public let sheet: Int?
+
+    public init(sheet: Int? = nil) {
+        ranges = []
+        self.sheet = sheet
+    }
+
+    public func addMeasurements(height: Int, offset: CellLocation) {
+        ranges.append(
+            Range(
+                length: 9,
+                height: height,
+                offset: offset,
+                sheet: sheet
+            )
+        )
+    }
+
+    public var numberFormatRules: [NumberFormatRule] {
+        ranges.map{NumberFormatRule(range: $0)}
+    }
+}
+
 // 2. Generate request body
 
 public struct NumberFormatRule: Codable {
