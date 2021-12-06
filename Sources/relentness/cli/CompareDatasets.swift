@@ -24,6 +24,24 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
+public struct PatternProcessingResult: Sendable {
+    public let cellValues: [[CellValue]]
+    public let description: String
+    let asDict: DatasetTestingResult
+
+    public init<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) {
+        cellValues = [
+            [CellValue.string(value: pattern)] + stats.descriptionItems
+        ]
+        description = "\(pattern)\t\(stats)"
+        asDict = stats.asDict
+    }
+}
+
+public enum PatternError: Error {
+    case unsupportedPattern(name: String)
+}
+
 public struct CompareDatasets: ParsableCommand {
     // @Argument(help: "Path to the directory with dataset files")
     // var corpus: String?
@@ -58,6 +76,12 @@ public struct CompareDatasets: ParsableCommand {
     @Flag(name: .long, help: "Print request body instead of exporing comparison results")
     var dryRun = false
 
+    @Option(name: .long, help: "Maximum number of patterns which are allowed to be processed concurrently in separate processes")
+    var nPatternProcessingWorkers: Int?
+
+    @Option(name: .long, help: "Maximum number of dataset upload operations which are allowed to run in parallel")
+    var nDatasetUploadingWorkers: Int?
+
     public static var configuration = CommandConfiguration(
         commandName: "compare-datasets",
         abstract: "Evaluate datasets by checking which graph patterns are present in their structure"
@@ -90,6 +114,9 @@ public struct CompareDatasets: ParsableCommand {
         let exportToGoogleSheets_ = exportToGoogleSheets
         let dryRun_ = dryRun
 
+        let nPatternProcessingWorkers_ = nPatternProcessingWorkers
+        let nDatasetUploadingWorkers_ = nDatasetUploadingWorkers
+
         // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
         BlockingTask {
             let adapter = BlazegraphAdapter(address: blazegraphHost_)
@@ -98,17 +125,30 @@ public struct CompareDatasets: ParsableCommand {
             let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: nil) : nil
             var currentMetricsRowOffset = 0
             var nPatterns = 0
+            var datasetTestingResults = [DatasetTestingResult]()
 
-            func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
+            // func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
+            //     if let unwrappedAdapter = googleSheetsAdapter {
+            //         _ = try unwrappedAdapter.appendCells(
+            //             [
+            //                 [CellValue.string(value: pattern)] + stats.descriptionItems
+            //             ]
+            //         )
+            //         currentMetricsRowOffset += 1
+            //         nPatterns += 1
+            //     }
+            // }
+
+            func appendStatCells(_ patternProcessingResult: PatternProcessingResult) throws {
                 if let unwrappedAdapter = googleSheetsAdapter {
                     _ = try unwrappedAdapter.appendCells(
-                        [
-                            [CellValue.string(value: pattern)] + stats.descriptionItems
-                        ]
+                        patternProcessingResult.cellValues
                     )
                     currentMetricsRowOffset += 1
                     nPatterns += 1
                 }
+                datasetTestingResults.append(patternProcessingResult.asDict)
+                logger.info(Logger.Message(stringLiteral: patternProcessingResult.description))
             }
 
             _ = try! googleSheetsAdapter?
@@ -147,6 +187,7 @@ public struct CompareDatasets: ParsableCommand {
                 logger.info("Evaluating dataset \(dataset.name)...")
                 logger.info("Cleaning the knowledge base...")
                 let clearResponse = try! await adapter.clear()
+                datasetTestingResults = [DatasetTestingResult]()
                 logger.trace(Logger.Message(stringLiteral: String(describing: clearResponse)))
                 logger.info("Filling the knowledge base with required data...")
 
@@ -164,7 +205,8 @@ public struct CompareDatasets: ParsableCommand {
                 if let unwrappedBatchSize = batchSize_ {
                     let ttls = OpenKEImporter(dataset.path, batches: batches).asTtls(batchSize: unwrappedBatchSize)
                     logger.trace("Generated \(ttls.count) batches for updating the knowledge base")
-                    for i in 0..<ttls.count {
+                    // for i in 0..<ttls.count {
+                    _ = try! await (0..<ttls.count).asyncMap(nWorkers: nDatasetUploadingWorkers_) { i, _ -> Bool in
                         logger.trace("Inserting \(i + 1) batch...")
                         let insertResponse = try! await adapter.insert( 
                             InsertQuery(
@@ -173,6 +215,8 @@ public struct CompareDatasets: ParsableCommand {
                             // timeout: 3_600_000
                         )
                         logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
+
+                        return true
                     }
                     logger.trace("Finished knowledge base update")
                 } else {
@@ -184,39 +228,6 @@ public struct CompareDatasets: ParsableCommand {
                     )
                     logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
                 }
-            // }
-
-
-        // }
-
-        // BlockingTask {
-            // let countSymmetricPairs = CountingQuery(
-            //     text: """
-            //     select (count(?h) as ?count) where {
-            //       ?h ?r ?t.
-            //       ?t ?r ?h
-            //     }
-            //     """
-            // )
-
-            // let countAsymmetricTriples = CountingQuery(
-            //     text: """
-            //     select (count(?h) as ?count) where {
-            //       ?h ?r ?t.
-            //       filter ( !exists { ?t ?r ?h } )
-            //     }
-            //     """
-            // )
-
-            // let adapter = BlazegraphAdapter(address: blazegraphHost_)
-
-            // let nSymmetricTriples = try! await adapter.sample(countSymmetricPairs).count
-            // let nAsymmetricTriples = try! await adapter.sample(countAsymmetricTriples).count
-            // let nTotalTriples = nSymmetricTriples + nAsymmetricTriples
-
-            // print("\(String(format: "%.3f", Double(nSymmetricTriples) / Double(nTotalTriples))) portion of triples are symmetrical") 
-
-            // print("Handling patterns...")
 
                 logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
 
@@ -227,49 +238,57 @@ public struct CompareDatasets: ParsableCommand {
                 )
                 currentMetricsRowOffset += 1
 
-                var datasetTestingResults = [DatasetTestingResult]()
 
-                for pattern in patterns.storage.elements {
+                // for pattern in patterns.storage.elements {
+                _ = try! await patterns.storage.elements.asyncMap(nWorkers: nPatternProcessingWorkers_) { pattern, _ -> PatternProcessingResult in
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "symmetric")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("symmetric\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"symmetric") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "symmetric")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
                             let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "antisymmetric")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("antisymmetric\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"antisymmetric") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "antisymmetric")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
                             let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "equivalence")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("equivalence\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"equivalence") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "equivalence")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("equivalence\t\(stats)")
                         case "implication":
                             let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "implication")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("implication\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"implication") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "implication")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("implication\t\(stats)")
                         case "reflexive":
                             let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "reflexive")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("reflexive\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"reflexive") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "reflexive")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("reflexive\t\(stats)")
                         case "transitive":
                             let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "transitive")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("transitive\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"transitive") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "transitive")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("transitive\t\(stats)")
                         case "composition":
                             let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter) 
-                            try! appendStatCells(stats, pattern: "composition")
-                            datasetTestingResults.append(stats.asDict)
-                            logger.info("composition\t\(stats)")
+                            return PatternProcessingResult(stats, pattern:"composition") // , logger: logger)
+                            // try! appendStatCells(stats, pattern: "composition")
+                            // datasetTestingResults.append(stats.asDict)
+                            // logger.info("composition\t\(stats)")
                         case let patternName:
-                            print("Unsupported pattern \(patternName)") 
+                            throw PatternError.unsupportedPattern(name: patternName)
+                            // print("Unsupported pattern \(patternName)") 
                     }
-                }
+                }.map(appendStatCells)
 
                 _ = try! googleSheetsAdapter?.appendCells( // Empty line for visual separation of adjacent dataset testing results
                     [
@@ -352,18 +371,10 @@ public struct CompareDatasets: ParsableCommand {
 
                 numberFormatRanges?.addMeasurements(height: nPatterns, offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1))
 
-                // if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
-                //     _ = unwrappedAdapter.emphasizeCells(
-                //         datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)),
-                //         sheet: unwrappedAdapter.lastSheetId
-                //     )
-                // }
-
                 optimalValueLocations.append(contentsOf: datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)))
 
                 currentMetricsRowOffset += 1
             }
-            // print("There are \(try! await adapter.sample(countSymmetricPairs).count) symmetric relation pair instances in the knowledge base")
 
             if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
                 _ = unwrappedAdapter.emphasizeCells(

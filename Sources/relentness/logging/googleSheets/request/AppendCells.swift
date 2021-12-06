@@ -4,7 +4,7 @@ public typealias Format = AppendCells.Row.Value.CellFormat
 public struct AppendCells: Codable {
     public struct Row: Codable {
         public struct Value: Codable {
-            public enum UserEnteredValue: Codable {
+            public enum UserEnteredValue: Codable, Sendable {
                 case number(value: Double)
                 case string(value: String) 
                 case bool(value: Bool) 

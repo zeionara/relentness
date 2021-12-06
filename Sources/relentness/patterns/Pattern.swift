@@ -2,7 +2,7 @@ import Foundation
 import Yams
 import wickedData
 
-public struct Pattern: Codable {
+public struct Pattern: Codable, Sendable {
     public let name: String
     public let positiveQueryText: String
     public let negativeQueryText: String
@@ -166,11 +166,11 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
         let normalizingCount = positiveCount + negativeCount
 
         return [
-            .positiveRatio: Double(positiveCount) / Double(totalCount),
-            .negativeRatio: Double(negativeCount) / Double(totalCount),
-            .positiveNormalizedRatio: Double(positiveCount) / Double(normalizingCount),
-            .negativeNormalizedRatio: Double(negativeCount) / Double(normalizingCount),
-            .relativeRatio: Double(positiveCount) / Double(negativeCount),
+            .positiveRatio: totalCount != 0 ? Double(positiveCount) / Double(totalCount) : -Double.infinity,
+            .negativeRatio: totalCount != 0 ? Double(negativeCount) / Double(totalCount) : -Double.infinity,
+            .positiveNormalizedRatio: normalizingCount != 0 ?  Double(positiveCount) / Double(normalizingCount) : -Double.infinity,
+            .negativeNormalizedRatio: normalizingCount != 0 ? Double(negativeCount) / Double(normalizingCount) : -Double.infinity,
+            .relativeRatio: negativeCount != 0 ? Double(positiveCount) / Double(negativeCount) : -Double.infinity,
             .nPositiveOccurrences: Double(positiveCount),
             .nNegativeOccurrences: Double(negativeCount),
             .nTriples: Double(totalCount),
