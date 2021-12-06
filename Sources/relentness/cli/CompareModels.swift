@@ -5,7 +5,7 @@ import wickedData
 import ahsheet
 
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
-    // ModelImpl(architecture: .se, platform: .grapex),
+    ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
     // ModelImpl(architecture: .complex, platform: .openke)
@@ -100,9 +100,15 @@ public struct CompareModels: ParsableCommand {
 
         let dryRun_ = dryRun
 
+        let verbose_ = verbose
+
         BlockingTask {
             let tracker = ModelComparisonProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
-            let telegramBot = try! TelegramAdapter(tracker: tracker, secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"])
+            let telegramBot = try! TelegramAdapter(
+                tracker: tracker,
+                secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"],
+                logger: Logger(level: verbose_ ? .trace : .info, label: "telegram-bot")
+            )
 
             async let void: () = await telegramBot.run()
 

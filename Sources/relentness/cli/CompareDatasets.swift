@@ -117,13 +117,19 @@ public struct CompareDatasets: ParsableCommand {
         let nPatternProcessingWorkers_ = nPatternProcessingWorkers
         let nDatasetUploadingWorkers_ = nDatasetUploadingWorkers
 
+        let verbose_ = verbose
+
         // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
         BlockingTask {
             let adapter = BlazegraphAdapter(address: blazegraphHost_)
             let patterns = Patterns(patternsPath_)
 
             let tracker = DatasetComparisonProgressTracker(nDatasets: DATASETS_FOR_COMPARISON.count, nPatterns: patterns.storage.elements.count)
-            let telegramBot = try! TelegramAdapter(tracker: tracker, secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"])
+            let telegramBot = try! TelegramAdapter(
+                tracker: tracker,
+                secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"],
+                logger: Logger(level: verbose_ ? .trace : .info, label: "telegram-bot")
+            )
 
             let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
 
