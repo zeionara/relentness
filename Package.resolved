@@ -6,7 +6,7 @@
         "repositoryURL": "https://github.com/zeionara/ahsheet.git",
         "state": {
           "branch": "oauth",
-          "revision": "898894e6dccd728c1c8b8d1800cc574e41cc6e7a",
+          "revision": "30fda3560fcf806bf0471c8368c314993b7d3661",
           "version": null
         }
       },
@@ -33,7 +33,7 @@
         "repositoryURL": "https://github.com/zeionara/google-auth-library-swift",
         "state": {
           "branch": "master",
-          "revision": "ccc4081165f41ce4465ca89ebfc6041608ff8964",
+          "revision": "d32ec42aa752f5685860300d7e21cc055811cf83",
           "version": null
         }
       },
@@ -75,19 +75,19 @@
       },
       {
         "package": "TelegramBotSDK",
-        "repositoryURL": "https://github.com/zmeyc/telegram-bot-swift.git",
+        "repositoryURL": "https://github.com/zeionara/telegram-bot-swift.git",
         "state": {
-          "branch": null,
-          "revision": "c03186fdbde69be648be33c57793a2d83c5a8256",
-          "version": "2.1.2"
+          "branch": "master",
+          "revision": "7d995c4b83adb5cc9de40ec87b5b448b83d36aad",
+          "version": null
         }
       },
       {
         "package": "wickedData",
-        "repositoryURL": "/home/zeio/wicked-data",
+        "repositoryURL": "https://github.com/zeionara/wicked-data",
         "state": {
           "branch": "master",
-          "revision": "ab132323cf651989d2f41f5973d504baf1ea6e84",
+          "revision": "7976787df5a4cfe37e757304ddf2eb86e2e74efc",
           "version": null
         }
       },

@@ -1,5 +1,6 @@
 import Foundation
 import TelegramBotSDK
+import Logging
 
 public protocol ProgressTracker {
     var status: String { get async }
@@ -133,13 +134,20 @@ public class TelegramAdapter {
     private var nWastedStartAttempts: [Int64: Int]
     private let secret: String?
 
-    public init(token: String? = nil, tracker: ProgressTracker, nMaxStartAttempts: Int = 3, secret: String? = nil) throws {
+    public init(token: String? = nil, tracker: ProgressTracker, nMaxStartAttempts: Int = 3, secret: String? = nil, logger: Logger? = nil) throws {
         keepFetchingUpdates = true
         handledFirstStop = false
 
+        func makeLogAppender() -> AppendToLog {
+            if let unwrappedLogger = logger {
+                return { message in unwrappedLogger.trace(Logger.Message(stringLiteral: message)) } 
+            }
+            return { message in print(message) } 
+        }
+
         let token_ = token ?? readToken(from: "EMBEDDABOT_TOKEN")
         self.token = token_
-        let bot_ = TelegramBot(token: token_)
+        let bot_ = TelegramBot(token: token_, log: makeLogAppender())
         self.bot = bot_
         self.tracker = tracker
 

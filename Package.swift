@@ -8,12 +8,12 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
-        // .package(url: "https://github.com/zeionara/wicked-data", branch: "master"),
-        .package(url: "/home/zeio/wicked-data", branch: "master"),
+        .package(url: "https://github.com/zeionara/wicked-data", branch: "master"),
+        // .package(url: "/home/zeio/wicked-data", branch: "master"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "4.0.6"),
         // .package(url: "/home/zeio/ahsheet", .branch("oauth")),
         .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth")),
-        .package(url: "https://github.com/zmeyc/telegram-bot-swift.git", from: "2.0.0")
+        .package(url: "https://github.com/zeionara/telegram-bot-swift.git", branch: "master")
         // .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth"))
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
