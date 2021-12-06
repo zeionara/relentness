@@ -138,6 +138,7 @@ public struct CompareDatasets: ParsableCommand {
                 )
 
             let numberFormatRanges = googleSheetsAdapter == nil ? nil : DatasetCompatisonNumberFormatRanges(sheet: googleSheetsAdapter!.lastSheetId)
+            var optimalValueLocations = [CellLocation]()
 
             currentMetricsRowOffset += 6
 
@@ -351,16 +352,25 @@ public struct CompareDatasets: ParsableCommand {
 
                 numberFormatRanges?.addMeasurements(height: nPatterns, offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1))
 
-                if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
-                    _ = unwrappedAdapter.emphasizeCells(
-                        datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)),
-                        sheet: unwrappedAdapter.lastSheetId
-                    )
-                }
+                // if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
+                //     _ = unwrappedAdapter.emphasizeCells(
+                //         datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)),
+                //         sheet: unwrappedAdapter.lastSheetId
+                //     )
+                // }
+
+                optimalValueLocations.append(contentsOf: datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)))
 
                 currentMetricsRowOffset += 1
             }
             // print("There are \(try! await adapter.sample(countSymmetricPairs).count) symmetric relation pair instances in the knowledge base")
+
+            if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
+                _ = unwrappedAdapter.emphasizeCells(
+                    optimalValueLocations,
+                    sheet: unwrappedAdapter.lastSheetId
+                )
+            }
 
             _ = googleSheetsAdapter?.addNumberFormatRules(numberFormatRanges!.numberFormatRules)
             _ = try! await googleSheetsAdapter?.commit(dryRun: dryRun_)
