@@ -1,7 +1,11 @@
 import Foundation
 import TelegramBotSDK
 
-public actor ProgressTracker {
+public protocol ProgressTracker {
+    var status: String { get async }
+}
+
+public actor ModelComparisonProgressTracker: ProgressTracker {
     let nModels: Int
     var nHyperParameterSets: Int
     
@@ -45,6 +49,73 @@ public actor ProgressTracker {
     public func setNhyperParameterSets(_ value: Int) {
         nHyperParameterSets = value
         self.nProcessedHyperParameterSets = 0
+    }
+
+    public var status: String {
+        get async {
+            "\(self.getNprocessedModels()) / \(self.nModels) models and " +
+            "\(self.getNprocessedHyperParameterSets()) / \(self.getNhyperParameterSets()) hyperparameters sets for the current model are handled"
+        }
+    }
+}
+
+public actor DatasetComparisonProgressTracker: ProgressTracker {
+    let nDatasets: Int
+    var nPatterns: Int
+    
+    var nProcessedDatasets: Int
+    var nProcessedPatterns: Int
+   
+    public init(nDatasets: Int, nPatterns: Int) {
+        self.nDatasets = nDatasets
+        self.nPatterns = nPatterns
+
+        self.nProcessedDatasets = 0
+        self.nProcessedPatterns = 0
+    } 
+    
+    public func nextPattern() {
+       self.nProcessedPatterns += 1
+    } 
+
+    public func nextDataset() { // nPatterns: Int
+       self.nProcessedDatasets += 1
+       // self.nPatterns = nPatterns
+       // self.nProcessedPatterns = 0
+    }
+
+    // public func getNmodels() -> Int {
+    //     self.nModels
+    // }
+
+    public func getNpatterns() -> Int {
+        self.nPatterns
+    }
+
+    public func getNprocessedDatasets() -> Int {
+        self.nProcessedDatasets
+    }
+
+    public func getNprocessedPatterns() -> Int {
+        self.nProcessedPatterns
+    }
+
+    public func resetNprocessedPatterns() -> Int {
+        let nProcessedPatternsCache = nProcessedPatterns
+        nProcessedPatterns = 0
+        return nProcessedPatternsCache
+    }
+
+    // public func setNpatterns(_ value: Int) {
+    //     nPatterns = value
+    //     self.nProcessedPatterns = 0
+    // }
+
+    public var status: String {
+        get async {
+            "\(self.getNprocessedDatasets()) / \(self.nDatasets) datasets and " +
+            "\(self.getNprocessedPatterns()) / \(self.getNpatterns()) patterns for the current dataset are handled"
+        }
     }
 }
 
@@ -143,10 +214,7 @@ public class TelegramAdapter {
     private func status(context: Context) -> Bool {
         IfStarted(context) {
             Task {
-                context.respondAsync("\(context.update.message!.from!.firstName), \(await self.tracker.getNprocessedModels()) / \(self.tracker.nModels) models and " +
-                                     "\(await self.tracker.getNprocessedHyperParameterSets()) / \(await self.tracker.getNhyperParameterSets()) hyperparameters sets for the " +
-                                     "\((await self.tracker.getNprocessedModels()) + 1) model handled"
-                )
+                context.respondAsync("\(context.update.message!.from!.firstName), \(await self.tracker.status)")
             }
 
             if !handledFirstStop {

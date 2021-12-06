@@ -101,7 +101,7 @@ public struct CompareModels: ParsableCommand {
         let dryRun_ = dryRun
 
         BlockingTask {
-            let tracker = ProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
+            let tracker = ModelComparisonProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
             let telegramBot = try! TelegramAdapter(tracker: tracker, secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"])
 
             async let void: () = await telegramBot.run()

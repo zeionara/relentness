@@ -122,10 +122,20 @@ public struct CompareDatasets: ParsableCommand {
             let adapter = BlazegraphAdapter(address: blazegraphHost_)
             let patterns = Patterns(patternsPath_)
 
-            let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: nil) : nil
+            let tracker = DatasetComparisonProgressTracker(nDatasets: DATASETS_FOR_COMPARISON.count, nPatterns: patterns.storage.elements.count)
+            let telegramBot = try! TelegramAdapter(tracker: tracker, secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"])
+
+            let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
+
             var currentMetricsRowOffset = 0
             var nPatterns = 0
             var datasetTestingResults = [DatasetTestingResult]()
+
+            async let void: () = await telegramBot.run()
+            
+            Task {
+                telegramBot.broadcast("The bot has started")
+            }
 
             // func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
             //     if let unwrappedAdapter = googleSheetsAdapter {
@@ -183,6 +193,11 @@ public struct CompareDatasets: ParsableCommand {
             currentMetricsRowOffset += 6
 
             for dataset in DATASETS_FOR_COMPARISON {
+
+                Task {
+                    telegramBot.broadcast("Evaluating dataset \(dataset) on \(patterns.storage.elements.count) patterns...")
+                }
+
                 nPatterns = 0
                 logger.info("Evaluating dataset \(dataset.name)...")
                 logger.info("Cleaning the knowledge base...")
@@ -229,6 +244,10 @@ public struct CompareDatasets: ParsableCommand {
                     logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
                 }
 
+                Task {
+                    telegramBot.broadcast("Uploaded \(dataset) to the knowledge base")
+                }
+
                 logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
 
                 _ = try! googleSheetsAdapter?.appendCells(
@@ -238,9 +257,17 @@ public struct CompareDatasets: ParsableCommand {
                 )
                 currentMetricsRowOffset += 1
 
+                // Task {
+                //     await tracker.setNpatterns(.storage.sets.count)
+                // }
 
                 // for pattern in patterns.storage.elements {
                 _ = try! await patterns.storage.elements.asyncMap(nWorkers: nPatternProcessingWorkers_) { pattern, _ -> PatternProcessingResult in
+                    defer {
+                        Task {
+                            await tracker.nextPattern()
+                        }
+                    }
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter) 
@@ -289,6 +316,10 @@ public struct CompareDatasets: ParsableCommand {
                             // print("Unsupported pattern \(patternName)") 
                     }
                 }.map(appendStatCells)
+
+                Task {
+                    telegramBot.broadcast("Finished \(dataset) evaluation")
+                }
 
                 _ = try! googleSheetsAdapter?.appendCells( // Empty line for visual separation of adjacent dataset testing results
                     [
@@ -374,6 +405,12 @@ public struct CompareDatasets: ParsableCommand {
                 optimalValueLocations.append(contentsOf: datasetTestingResults.getOptimalValueLocations(offset: CellLocation(row: currentMetricsRowOffset - nPatterns, column: 1)))
 
                 currentMetricsRowOffset += 1
+
+                Task {
+                    await tracker.nextDataset()
+                }
+
+                _ = await tracker.resetNprocessedPatterns()
             }
 
             if let unwrappedAdapter = googleSheetsAdapter { // TODO: Make one call for all datasets
@@ -385,6 +422,8 @@ public struct CompareDatasets: ParsableCommand {
 
             _ = googleSheetsAdapter?.addNumberFormatRules(numberFormatRanges!.numberFormatRules)
             _ = try! await googleSheetsAdapter?.commit(dryRun: dryRun_)
+
+            telegramBot.broadcast("Completed comparing datasets")
         } // BlockingTask
     }
 }
