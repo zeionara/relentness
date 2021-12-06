@@ -33,35 +33,37 @@ public struct Pattern: Codable, Sendable {
         )
     }
 
-    public func getPositiveSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    public func getPositiveSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
-            getPositiveQuery()
+            getPositiveQuery(),
+            timeout: timeout
         )
     }
 
-    public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
             getNegativeQuery(),
-            timeout: 3_600_000
+            timeout: timeout // 3_600_000
         )
     }
 
-    public func getTotalSample(_ adapter: BlazegraphAdapter) async throws -> Sample<CountingQuery.BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    public func getTotalSample(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> Sample<CountingQuery.BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
-            totalQuery
+            totalQuery,
+            timeout: timeout
         )
     }
 
-    public func evaluate<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> PatternStats<BindingType> {
+    public func evaluate<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> PatternStats<BindingType> {
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
 
         try await measureExecutionTime {
             (
-                positive: try await getPositiveSample(adapter),
-                negative: try await getNegativeSample(adapter),
-                total: try await getTotalSample(adapter)
+                positive: try await getPositiveSample(adapter, timeout: timeout),
+                negative: try await getNegativeSample(adapter, timeout: timeout),
+                total: try await getTotalSample(adapter, timeout: timeout)
             )
         } handleExecutionTimeMeasurement: { (samples, executionTime) in
             PatternStats(

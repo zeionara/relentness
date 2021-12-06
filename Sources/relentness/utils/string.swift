@@ -1,5 +1,9 @@
 import Foundation
 
+public extension Bool {
+    var negated: Self { !self }
+}
+
 public extension String {
     var rows: [String] {
         self.components(separatedBy: "\n")
@@ -14,11 +18,23 @@ public extension String {
     }
 
     var asDouble: Double {
-        Double(self)!
+        Double(self.withoutWhitespaces)!
     }
 
     var asInt: Int {
-        Int(self)!
+        // print("Converting \(self) to int")
+        // print(self)
+        // print(Int(self))
+        // print(Int(String(self)))
+        // print(Int("0"))
+        // print(self == "0")
+        // print(self.count)
+        // print("|\(self)|")
+        return Int(self.withoutWhitespaces)!
+    }
+
+    var withoutWhitespaces: Self {
+        filter(\.isWhitespace.negated)
     }
 }
 

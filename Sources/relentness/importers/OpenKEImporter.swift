@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 
 public typealias IndexedTriple = (head: Int, relation: Int, tail: Int)
 public typealias StringifiedTriple = (head: String, relation: String, tail: String)
@@ -97,7 +98,7 @@ public class TriplesBatch {
         let fromTail = DictionaryOfArrays<Int, IndexedTriple>() // [Int: [IndexedTriple]]()
         let fromEntity = DictionaryOfArrays<Int, IndexedTriple>() // [Int: [IndexedTriple]]()
 
-        let decodedRows = contentsWithoutHeader.map{ row -> IndexedTriple in
+        let decodedRows = (contentsWithoutHeader.last! == "" ? contentsWithoutHeader.dropLast() : contentsWithoutHeader).map{ row -> IndexedTriple in
             let tripleComponents = row.tabSeparatedValues
 
             return (head: tripleComponents.first!.asInt, relation: tripleComponents.last!.asInt, tail: tripleComponents[1].asInt) 
@@ -154,11 +155,12 @@ public class OpenKEMapping {
     private let fromId: [String]
     public var fromName: [String: [Int]] 
 
-    public init(_ path: String) {
+    public init(_ path: String, logger: Logger? = nil) {
         // fromId = [String]()
         // fromName = [String: [Int]]()
         
         let contents = try! String(contentsOf: URL.local(path)!, encoding: .utf8) // TODO: Add exception handling
+        // logger.trace("Head of contents: \(contents.prefix(100))")
         let contentsRows = contents.rows
         let contentsWithoutHeader = contents.rows[1..<contentsRows.count]
         
@@ -166,20 +168,35 @@ public class OpenKEMapping {
 
         var fromId = [String]()
         var fromName = [String: [Int]]()
-        let decodedRows = contentsWithoutHeader.map{ row -> (String, String) in
+        // var index = 1
+        let decodedRows = (contentsWithoutHeader.last! == "" ? contentsWithoutHeader.dropLast() : contentsWithoutHeader).map{ row -> (String, String) in
             let nameAndId = row.tabSeparatedValues
+
+            // if nameAndId.first! == "" && nameAndId.last! == "" {
+            //     logger.trace("line \(index) is empty")
+            // }
+
+            // index += 1
 
             return (nameAndId.first!, nameAndId.last!) 
         }.sorted{
             $0.1 < $1.1
         }
 
+        // logger.trace("First 10 decoded rows")
+        // logger.trace(String(describing: decodedRows[0..<10]))
+
         for (name, id) in decodedRows {
+            // logger.trace("name = \(name), id = \(id)")
             fromId.append(name)
             if var ids = fromName[name] {
+               // logger.trace("before as int (1)")
                ids.append(id.asInt)
+               // logger.trace("after as int (1)")
             } else {
+               // logger.trace("before as int (2)")
                fromName[name] = [id.asInt] 
+               // logger.trace("after as int (2)")
             }
         }
 
@@ -217,10 +234,13 @@ public struct OpenKEImporter {
     public let batches: [TriplesBatch]
     public let path: String
 
-    public init(_ path: String, batches: [String]? = nil) {
+    public init(_ path: String, batches: [String]? = nil, logger: Logger? = nil) {
         self.path = path
-        entityMapping = OpenKEMapping("./Assets/Corpora/\(path)/entity2id.txt")
+        logger.trace("Reading entity mappings...")
+        entityMapping = OpenKEMapping("./Assets/Corpora/\(path)/entity2id.txt", logger: logger)
+        logger.trace("Reading relationship mappings...")
         relationshipMapping = OpenKEMapping("./Assets/Corpora/\(path)/relation2id.txt")
+        logger.trace("Reading batches \((batches ?? ["train2id", "test2id", "valid2id"]).joined(separator: ", "))...")
 
         var batches_ = [TriplesBatch]()
         for batch in batches ?? ["train2id", "test2id", "valid2id"] {
