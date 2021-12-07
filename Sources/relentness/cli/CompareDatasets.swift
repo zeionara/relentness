@@ -149,15 +149,21 @@ public struct CompareDatasets: ParsableCommand {
                 logger: Logger(level: verbose_ ? .trace : .info, label: "telegram-bot")
             ) : nil
 
+            logger.trace("Creating google sheets adapter")
+
             let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
 
             var currentMetricsRowOffset = 0
             var nPatterns = 0
             var datasetTestingResults = [DatasetTestingResult]()
 
-            if let unwrappedTelegramBot = telegramBot {
-                async let void: () = await unwrappedTelegramBot.run()
-            }
+            logger.trace("Starting telegram bot")
+
+            // if let unwrappedTelegramBot = telegramBot {
+            async let void = telegramBot?.run()
+            // }
+
+            logger.trace("Started telegram bot")
             
             Task {
                 telegramBot?.broadcast("The bot has started")
