@@ -64,11 +64,7 @@ public struct Pattern: Codable, Sendable {
         )
     }
 
-    public func getSample<BindingType: CountableBindingTypeWithAggregation>(
-        _ adapter: BlazegraphAdapter,
-        query: String
-        // getQuery: (_ limit: Int?, _ offset: Int?) -> CountingQueryWithAggregation<BindingType>
-    ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    public func getSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         // print("Getting positive sample...")
 
         if let batchSizeUnwrapped = batchSize {
@@ -82,7 +78,7 @@ public struct Pattern: Codable, Sendable {
                 // let foo: CountingQueryWithAggregation<BindingType> = getPositiveQuery(limit: limit, offset: offset)
                 // print(try await adapter.sample(foo).nBindings)
 
-                let partialSample: Sample<BindingType> = try await adapter.sample(getQuery(query, limit: batchSizeUnwrapped, offset: offset))
+                let partialSample: Sample<BindingType> = try await adapter.sample(getQuery(query, limit: batchSizeUnwrapped, offset: offset), timeout: timeout)
 
                 print("limit = \(batchSizeUnwrapped), offset = \(offset), n-bindings = \(partialSample.nBindings)")
 
@@ -98,24 +94,19 @@ public struct Pattern: Codable, Sendable {
         }
 
         return try await adapter.sample(
-            getQuery(query)
+            getQuery(query),
+            timeout: timeout
         )
     }
 
-    // public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-    //     try await adapter.sample(
-    //         getNegativeQuery(),
-    //         timeout: 3_600_000
-    //     )
-    // }
-
-    public func getTotalSample(_ adapter: BlazegraphAdapter) async throws -> Sample<CountingQuery.BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    public func getTotalSample(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> Sample<CountingQuery.BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
-            totalQuery
+            totalQuery,
+            timeout: timeout
         )
     }
 
-    public func evaluate<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> PatternStats<BindingType> {
+    public func evaluate<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter, timeout: Int? = nil) async throws -> PatternStats<BindingType> {
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
@@ -123,9 +114,9 @@ public struct Pattern: Codable, Sendable {
 
         return try await measureExecutionTime {
             (
-                positive: try await getSample(adapter, query: positiveQueryText),
-                negative: try await getSample(adapter, query: negativeQueryText),
-                total: try await getTotalSample(adapter)
+                positive: try await getSample(adapter, query: positiveQueryText, timeout: timeout),
+                negative: try await getSample(adapter, query: negativeQueryText, timeout: timeout),
+                total: try await getTotalSample(adapter, timeout: timeout)
             )
         } handleExecutionTimeMeasurement: { (samples, executionTime) in
             PatternStats(
