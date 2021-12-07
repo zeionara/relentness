@@ -55,78 +55,281 @@ items:
       group by ?primary ?secondary
       order by desc(?count)
   - name: implication
+    # positive: |-
+    #   select (sum(?partial_count) as ?count) ?original ?derivative {
+    #     {
+    #       select (count(?h) as ?partial_count) ?original ?derivative {
+    #         {
+    #           select ?original where {
+    #             ?h_ ?original ?t_
+    #           }
+    #           group by ?original
+    #         }
+    #         {
+    #           select ?derivative where {
+    #             ?h_ ?derivative ?t_
+    #           }
+    #           group by ?derivative
+    #         }
+    #         ?h ?derivative ?t.
+    #         filter(!exists{?h ?original ?t})
+    #       }
+    #       group by ?original ?derivative
+    #     } union {
+    #       select (count(?h) as ?partial_count) ?original ?derivative {
+    #         {
+    #           select ?original where {
+    #             ?h_ ?original ?t_
+    #           }
+    #           group by ?original
+    #         }
+    #         {
+    #           select ?derivative where {
+    #             ?h_ ?derivative ?t_
+    #           }
+    #           group by ?derivative
+    #         }
+    #         ?h ?original ?t;
+    #            ?derivative ?t.
+    #       }
+    #       group by ?original ?derivative
+    #     }
+    #   }
+    #   group by ?original ?derivative
+    #   order by desc(?count)
+#      select (count(?h) as ?count) ?original ?derivative {
+#        {
+#          {
+#            select ?original where {
+#              ?h_ ?original ?t_
+#            }
+#            group by ?original
+#          }
+#          {
+#            select ?derivative where {
+#              ?h_ ?derivative ?t_
+#            }
+#            group by ?derivative
+#          }
+#          ?h ?derivative ?t.
+#          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+#        } union {
+#          {
+#            select ?original where {
+#              ?h_ ?original ?t_
+#            }
+#            group by ?original
+#          }
+#          {
+#            select ?derivative where {
+#              ?h_ ?derivative ?t_
+#            }
+#            group by ?derivative
+#          }
+#          ?h ?original ?t;
+#             ?derivative ?t. # original and derivative exist
+#        }
+#      }
+#      group by ?original ?derivative
+#      order by desc(?count)
     positive: |-
-      select (count(?h) as ?count) ?original ?derivative {
+      select (sum(?partial_count) as ?count) ?original ?derivative 
+      with {
+        select ?original ?derivative {
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+        }
+        order by ?original ?derivative
+        limit {{limit}}
+        offset {{offset}}
+      } as %derivatives_and_originals
+      where {
         {
-          {
-            select ?original where {
-              ?h_ ?original ?t_
-            }
-            group by ?original
+          select (count(*) as ?partial_count) ?original ?derivative {
+            include %derivatives_and_originals
+            ?h ?derivative ?t.
+            filter(!exists{?h ?original ?t})
           }
-          {
-            select ?derivative where {
-              ?h_ ?derivative ?t_
-            }
-            group by ?derivative
-          }
-          ?h ?derivative ?t.
-          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+          group by ?original ?derivative
         } union {
-          {
-            select ?original where {
-              ?h_ ?original ?t_
-            }
-            group by ?original
+          select (count(*) as ?partial_count) ?original ?derivative {
+            include %derivatives_and_originals
+            ?h ?original ?t;
+               ?derivative ?t.
           }
-          {
-            select ?derivative where {
-              ?h_ ?derivative ?t_
-            }
-            group by ?derivative
-          }
-          ?h ?original ?t;
-             ?derivative ?t. # original and derivative exist
+          group by ?original ?derivative
         }
       }
       group by ?original ?derivative
       order by desc(?count)
     negative: |-
-      select (count(?h) as ?count) ?original ?derivative {
+      select (sum(?partial_count) as ?count) ?original ?derivative
+      with {
+        select ?original ?derivative {
+          {
+            select ?derivative where {
+              ?h_ ?derivative ?t_
+            }
+            group by ?derivative
+          }
+          {
+            select ?original where {
+              ?h_ ?original ?t_
+            }
+            group by ?original
+          }
+        }
+        order by ?original ?derivative
+        limit {{limit}}
+        offset {{offset}}
+      } as %derivatives_and_originals
+      where {
         {
-          {
-            select ?original where {
-              ?h_ ?original ?t_
-            }
-            group by ?original
+          select (count(*) as ?partial_count) ?original ?derivative {
+            include %derivatives_and_originals
+            ?h ?derivative ?t.
+            filter(!exists{?h ?original ?t})
           }
-          {
-            select ?derivative where {
-              ?h_ ?derivative ?t_
-            }
-            group by ?derivative
-          }
-          ?h ?derivative ?t.
-          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+          group by ?original ?derivative
         } union {
-          {
-            select ?original where {
-              ?h_ ?original ?t_
-            }
-            group by ?original
+          select (count(*) as ?partial_count) ?original ?derivative {
+            include %derivatives_and_originals
+            ?h ?original ?t.
+            filter(!exists{?h ?derivative ?t}).
           }
-          {
-            select ?derivative where {
-              ?h_ ?derivative ?t_
-            }
-            group by ?derivative
-          }
-          ?h ?original ?t.
-          filter(!exists{?h ?derivative ?t}). # original exists and derivative does not
+          group by ?original ?derivative
         }
       }
       group by ?original ?derivative
       order by desc(?count)
+      # select (sum(?partial_count) as ?count) ?original ?derivative {
+      #   {
+      #     select (count(?h) as ?partial_count) ?original ?derivative {
+      #       {
+      #         select ?original where {
+      #           ?h_ ?original ?t_
+      #         }
+      #         group by ?original
+      #       }
+      #       {
+      #         select ?derivative where {
+      #           ?h_ ?derivative ?t_
+      #         }
+      #         group by ?derivative
+      #       }
+      #       ?h ?derivative ?t.
+      #       filter(!exists{?h ?original ?t})
+      #     }
+      #     group by ?original ?derivative
+      #   } union {
+      #     select (count(?h) as ?partial_count) ?original ?derivative {
+      #       {
+      #         select ?original where {
+      #           ?h_ ?original ?t_
+      #         }
+      #         group by ?original
+      #       }
+      #       {
+      #         select ?derivative where {
+      #           ?h_ ?derivative ?t_
+      #         }
+      #         group by ?derivative
+      #       }
+      #       ?h ?original ?t.
+      #       filter(!exists{?h ?derivative ?t}).
+      #     }
+      #     group by ?original ?derivative
+      #   }
+      # }
+      # group by ?original ?derivative
+      # order by desc(?count)
+    batch-size: 16
+#      select (sum(?first_count) as ?count) ?original ?derivative {
+#        {
+#          select (count(?h) as ?first_count) ?original ?derivative {
+#            {
+#              select ?original where {
+#                ?h_ ?original ?t_
+#              }
+#              group by ?original
+#            }
+#            {
+#              select ?derivative where {
+#                ?h_ ?derivative ?t_
+#              }
+#              group by ?derivative
+#            }
+#            ?h ?derivative ?t.
+#            filter(!exists{?h ?original ?t})
+#          }
+#          group by ?original ?derivative
+#        } union {
+#          select (count(?h_2) as ?first_count) (?original_ as ?original) (?derivative_ as ?derivative) {
+#            {
+#              select ?original_ where {
+#                ?h_ ?original_ ?t_
+#              }
+#              group by ?original_
+#            }
+#            {
+#              select ?derivative_ where {
+#                ?h_ ?derivative_ ?t_
+#              }
+#              group by ?derivative_
+#            }
+#            ?h_2 ?original_ ?t_2.
+#            filter(!exists{?h_2 ?derivative_ ?t_2}).
+#          }
+#          group by ?original_ ?derivative_
+#        }
+#      }
+#      group by ?original ?derivative
+#      order by desc(?count)
+#      select (count(?h) as ?count) ?original ?derivative {
+#        {
+#          {
+#            select ?original where {
+#              ?h_ ?original ?t_
+#            }
+#            group by ?original
+#          }
+#          {
+#            select ?derivative where {
+#              ?h_ ?derivative ?t_
+#            }
+#            group by ?derivative
+#          }
+#          ?h ?derivative ?t.
+#          filter(!exists{?h ?original ?t}) # original does not exist, but derivative does
+#        } union {
+#          {
+#            select ?original where {
+#              ?h_ ?original ?t_
+#            }
+#            group by ?original
+#          }
+#          {
+#            select ?derivative where {
+#              ?h_ ?derivative ?t_
+#            }
+#            group by ?derivative
+#          }
+#          ?h ?original ?t.
+#          filter(!exists{?h ?derivative ?t}). # original exists and derivative does not
+#        }
+#      }
+#      group by ?original ?derivative
+#      order by desc(?count)
   - name: reflexive
     positive: |-
       select (count(?h) as ?count) ?loopback {

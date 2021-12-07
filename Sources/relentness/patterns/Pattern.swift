@@ -3,9 +3,16 @@ import Yams
 import wickedData
 
 public struct Pattern: Codable, Sendable {
+    private static let limitPlaceHolder = "{{limit}}"
+    private static let offsetPlaceHolder = "{{offset}}"
+
     public let name: String
     public let positiveQueryText: String
     public let negativeQueryText: String
+
+    public let positiveBatched: String? // TODO: Delete this
+
+    public let batchSize: Int?
 
     public let totalQuery = CountingQuery(
         text: """
@@ -19,32 +26,88 @@ public struct Pattern: Codable, Sendable {
         case name
         case positiveQueryText = "positive"
         case negativeQueryText = "negative"
+        case batchSize = "batch-size"
+        case positiveBatched // TODO: Delete this
     }
 
-    public func getPositiveQuery<BindingType: CountableBindingTypeWithAggregation>() -> CountingQueryWithAggregation<BindingType> {
+    public static func fillBatchSizePlaceHolders(_ query: String, limit: Int? = nil, offset: Int? = nil) -> String {
+        if let limitUnwrapped = limit, let offsetUnwrapped = offset {
+            let stringifiedLimit = String(limitUnwrapped)
+            let stringifiedOffset = String(offsetUnwrapped)
+
+            return query.replacingOccurrences(of: Pattern.limitPlaceHolder, with: stringifiedLimit).replacingOccurrences(of: Pattern.offsetPlaceHolder, with: stringifiedOffset)
+        }
+
+        return query
+    }
+
+    // public func getPositiveQuery<BindingType: CountableBindingTypeWithAggregation>(limit: Int? = nil, offset: Int? = nil) -> CountingQueryWithAggregation<BindingType> {
+    //     let query = Pattern.fillBatchSizePlaceHolders(positiveQueryText, limit: limit, offset: offset) // positiveQueryText
+
+    //     // if let limitUnwrapped = limit, let offsetUnwrapped = offset {
+    //     //     let stringifiedLimit = String(limitUnwrapped)
+    //     //     let stringifiedOffset = String(offsetUnwrapped)
+
+    //     //     query = positiveBatched!.replacingOccurrences(of: Pattern.limitPlaceHolder, with: stringifiedLimit).replacingOccurrences(of: Pattern.offsetPlaceHolder, with: stringifiedOffset)
+    //     // }
+
+    //     return CountingQueryWithAggregation<BindingType>(
+    //         text: query
+    //     )
+    // }
+
+    public func getQuery<BindingType: CountableBindingTypeWithAggregation>(_ text: String, limit: Int? = nil, offset: Int? = nil) -> CountingQueryWithAggregation<BindingType> {
+        let query = Pattern.fillBatchSizePlaceHolders(text, limit: limit, offset: offset) // positiveQueryText
+
         return CountingQueryWithAggregation<BindingType>(
-            text: positiveQueryText
+            text: query
         )
     }
 
-    public func getNegativeQuery<BindingType: CountableBindingTypeWithAggregation>() -> CountingQueryWithAggregation<BindingType> {
-        return CountingQueryWithAggregation<BindingType>(
-            text: negativeQueryText
+    public func getSample<BindingType: CountableBindingTypeWithAggregation>(
+        _ adapter: BlazegraphAdapter,
+        query: String
+        // getQuery: (_ limit: Int?, _ offset: Int?) -> CountingQueryWithAggregation<BindingType>
+    ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
+        // print("Getting positive sample...")
+
+        if let batchSizeUnwrapped = batchSize {
+            // print("Batch size = \(batchSizeUnwrapped)")
+
+            var offset = 0
+
+            var partialSamples = [Sample<BindingType>]()
+
+            while true {
+                // let foo: CountingQueryWithAggregation<BindingType> = getPositiveQuery(limit: limit, offset: offset)
+                // print(try await adapter.sample(foo).nBindings)
+
+                let partialSample: Sample<BindingType> = try await adapter.sample(getQuery(query, limit: batchSizeUnwrapped, offset: offset))
+
+                print("limit = \(batchSizeUnwrapped), offset = \(offset), n-bindings = \(partialSample.nBindings)")
+
+                if partialSample.nBindings == 0 {
+                    break
+                }
+
+                partialSamples.append(partialSample)
+                offset += batchSizeUnwrapped
+            }
+
+            return try join(partialSamples)
+        }
+
+        return try await adapter.sample(
+            getQuery(query)
         )
     }
 
-    public func getPositiveSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-        try await adapter.sample(
-            getPositiveQuery()
-        )
-    }
-
-    public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-        try await adapter.sample(
-            getNegativeQuery(),
-            timeout: 3_600_000
-        )
-    }
+    // public func getNegativeSample<BindingType: CountableBindingTypeWithAggregation>(_ adapter: BlazegraphAdapter) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
+    //     try await adapter.sample(
+    //         getNegativeQuery(),
+    //         timeout: 3_600_000
+    //     )
+    // }
 
     public func getTotalSample(_ adapter: BlazegraphAdapter) async throws -> Sample<CountingQuery.BindingType> { // TODO: Change blazegraph adapter to an abstract type
         try await adapter.sample(
@@ -57,10 +120,11 @@ public struct Pattern: Codable, Sendable {
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
 
-        try await measureExecutionTime {
+
+        return try await measureExecutionTime {
             (
-                positive: try await getPositiveSample(adapter),
-                negative: try await getNegativeSample(adapter),
+                positive: try await getSample(adapter, query: positiveQueryText),
+                negative: try await getSample(adapter, query: negativeQueryText),
                 total: try await getTotalSample(adapter)
             )
         } handleExecutionTimeMeasurement: { (samples, executionTime) in
