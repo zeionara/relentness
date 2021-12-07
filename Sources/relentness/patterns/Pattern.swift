@@ -13,6 +13,21 @@ public enum PatternKind {
     case positive, negative
 }
 
+private struct BatchIterator: IteratorProtocol {
+    typealias Element = (limit: Int, offset: Int)
+
+    let limit: Int
+    var offset: Int = 0
+
+    mutating func next() -> Self.Element? {
+        let nextItem = (limit: limit, offset: offset)
+
+        offset += limit
+
+        return nextItem
+    }
+}
+
 public struct Pattern: Codable, Sendable {
     fileprivate static let limitPlaceHolder = "{{limit}}"
     fileprivate static let offsetPlaceHolder = "{{offset}}"
@@ -77,43 +92,61 @@ public struct Pattern: Codable, Sendable {
 
     public func getSample<BindingType: CountableBindingTypeWithAggregation>(
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
-        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil
+        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         // print("Getting positive sample...")
 
         if let batchSizeUnwrapped = batchSize, query.containsPatternPlaceHolders {
             // print("Batch size = \(batchSizeUnwrapped)")
 
-            var offset = 0
-            var index = 0
+            // var offset = 0
+            // var index = 0
 
-            var partialSamples = [Sample<BindingType>]()
+            // var partialSamples = [Sample<BindingType>]()
 
-            while true {
-                index += 1
-                // let foo: CountingQueryWithAggregation<BindingType> = getPositiveQuery(limit: limit, offset: offset)
-                // print(try await adapter.sample(foo).nBindings)
+            var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
 
-                let partialSample: Sample<BindingType> = try await measureExecutionTime { () -> Sample<BindingType> in
-                    try await adapter.sample(getQuery(query, limit: batchSizeUnwrapped, offset: offset), timeout: timeout)
-                } handleExecutionTimeMeasurement: { sample, executionTime in 
+            let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, _, index) in
+                try await measureExecutionTime { () -> Sample<BindingType> in
+                    try await adapter.sample(getQuery(query, limit: item.limit, offset: item.offset), timeout: timeout)
+                } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                     logger.trace(
-                        "Processed \(index)th query batch (limit = \(batchSizeUnwrapped), offset = \(offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
+                        "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
                         ((kind ?? .positive) == .negative ? "negative" : "") +
                         " pattern \(pattern ?? "")"
                     )
                     return sample
                 }
-
-                if partialSample.nBindings == 0 {
-                    break
-                }
-
-                partialSamples.append(partialSample)
-                offset += batchSizeUnwrapped
+            } until: { sample in
+                sample.nBindings == 0
             }
 
-            return try join(partialSamples)
+            // while true {
+            //     print(batchIterator.next()!)
+            //     index += 1
+            //     // let foo: CountingQueryWithAggregation<BindingType> = getPositiveQuery(limit: limit, offset: offset)
+            //     // print(try await adapter.sample(foo).nBindings)
+
+            //     let partialSample: Sample<BindingType> = try await measureExecutionTime { () -> Sample<BindingType> in
+            //         try await adapter.sample(getQuery(query, limit: batchSizeUnwrapped, offset: offset), timeout: timeout)
+            //     } handleExecutionTimeMeasurement: { sample, executionTime in 
+            //         logger.trace(
+            //             "Processed \(index)th query batch (limit = \(batchSizeUnwrapped), offset = \(offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
+            //             ((kind ?? .positive) == .negative ? "negative" : "") +
+            //             " pattern \(pattern ?? "")"
+            //         )
+            //         return sample
+            //     }
+
+            //     if partialSample.nBindings == 0 {
+            //         break
+            //     }
+
+            //     partialSamples.append(partialSample)
+            //     offset += batchSizeUnwrapped
+            // }
+
+            return try join(samples)
         }
 
         // return try await adapter.sample(
@@ -141,7 +174,7 @@ public struct Pattern: Codable, Sendable {
     }
 
     public func evaluate<BindingType: CountableBindingTypeWithAggregation>(
-        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil
+        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil, nWorkers: Int? = nil
     ) async throws -> PatternStats<BindingType> {
         
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
@@ -150,8 +183,8 @@ public struct Pattern: Codable, Sendable {
 
         return try await measureExecutionTime {
             (
-                positive: try await getSample(adapter, query: positiveQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .positive),
-                negative: try await getSample(adapter, query: negativeQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .negative),
+                positive: try await getSample(adapter, query: positiveQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .positive, nWorkers: nWorkers),
+                negative: try await getSample(adapter, query: negativeQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .negative, nWorkers: nWorkers),
                 total: try await getTotalSample(adapter, timeout: timeout) // TODO: Extend signature according to the positive and negative pattern evaluators
             )
         } handleExecutionTimeMeasurement: { (samples, executionTime) in
