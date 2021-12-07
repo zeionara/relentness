@@ -112,8 +112,8 @@ public struct Pattern: Codable, Sendable {
                 } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                     logger.trace(
                         "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
-                        ((kind ?? .positive) == .negative ? "negative" : "") +
-                        " pattern \(pattern ?? "")"
+                        ((kind ?? .positive) == .negative ? "negative " : "") +
+                        "pattern \(pattern ?? "")"
                     )
                     return sample
                 }
