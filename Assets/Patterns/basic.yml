@@ -365,16 +365,51 @@ items:
       }
       group by ?translator
       order by desc(?count)
-  # - name: composition
-  #   positive: |-
-  #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
-  #       ?h ?premise ?t;
-  #          ?conclusion ?n.
-  #       ?t ?statement ?n.
-  #     }
-  #     group by ?premise ?statement ?conclusion
-  #     order by desc(?count)
-  #   negative: |-
+  - name: composition
+    positive: |-
+      select (count(?h) as ?count) ?premise ?statement ?conclusion {
+        ?h ?premise ?t;
+           ?conclusion ?n.
+        ?t ?statement ?n.
+      }
+      group by ?premise ?statement ?conclusion
+      order by desc(?count)
+    negative: |-
+      select (count(*) as ?count) ?premise ?statement ?conclusion
+      with {
+        select ?premise ?statement ?conclusion {
+          {
+            select ?premise where {
+              ?h ?premise ?t
+            }
+            group by ?premise
+          }
+          {
+            select ?statement where {
+              ?h ?statement ?t
+            }
+            group by ?statement
+          }
+          {
+            select ?conclusion where {
+              ?h ?conclusion ?t
+            }
+            group by ?conclusion
+          }
+        }
+        order by ?premise ?statement ?conclusion
+        limit {{limit}}
+        offset {{offset}}
+      } as %relations
+      where {
+        include %relations
+        ?h ?premise ?t.
+        ?t ?statement ?n.
+        filter(!exists{?h ?conclusion ?n})
+      }
+      group by ?premise ?statement ?conclusion
+      order by desc(?count)
+    batch-size: 4
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
   #       {
   #         select ?premise where {
