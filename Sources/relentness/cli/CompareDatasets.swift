@@ -17,12 +17,20 @@ public struct DatasetImpl: CustomStringConvertible {
 }
 
 let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
+<<<<<<< HEAD
+    // ModelImpl(architecture: .se, platform: .grapex),
+    // ModelImpl(architecture: .transe, platform: .grapex),
+    // DatasetImpl(name: .demo, path: "Demo/0000"),
+    DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
+    // ModelImpl(architecture: .complex, platform: .openke)
+=======
     // DatasetImpl(name: .demo, path: "Demo/0000"),
     // DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
     // DatasetImpl(name: .wordnet_18, path: "wordnet-18"),
     // DatasetImpl(name: .wordnet_18_rr, path: "wordnet-18-rr"),
     // DatasetImpl(name: .fb_13, path: "fb-13"),
     DatasetImpl(name: .fb_15k, path: "fb-15k"),
+>>>>>>> origin/master
 ]
 
 public struct PatternProcessingResult: Sendable {
@@ -74,6 +82,9 @@ public struct CompareDatasets: ParsableCommand {
     @Flag(name: .long, help: "Write results to google sheets")
     var exportToGoogleSheets = false
 
+    @Flag(name: .long, help: "Skip database update operations (this flag should be used only for test purposes when a dataset is repeatedly uploaded to the knowledge base)")
+    var doNotUpdate = false
+
     @Flag(name: .long, help: "Print request body instead of exporing comparison results")
     var dryRun = false
 
@@ -122,6 +133,7 @@ public struct CompareDatasets: ParsableCommand {
         let nDatasetUploadingWorkers_ = nDatasetUploadingWorkers
 
         let verbose_ = verbose
+        let doNotUpdate_ = doNotUpdate
         let samplingTimeout_ = samplingTimeout
 
         // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
@@ -211,52 +223,61 @@ public struct CompareDatasets: ParsableCommand {
 
                 nPatterns = 0
                 logger.info("Evaluating dataset \(dataset.name)...")
-                logger.info("Cleaning the knowledge base...")
-                let clearResponse = try! await adapter.clear()
-                datasetTestingResults = [DatasetTestingResult]()
-                logger.trace(Logger.Message(stringLiteral: String(describing: clearResponse)))
-                logger.info("Filling the knowledge base with required data...")
+                
+                if !doNotUpdate_ {
+                    logger.info("Cleaning the knowledge base...")
+                    let clearResponse = try! await adapter.clear()
+                    datasetTestingResults = [DatasetTestingResult]()
+                    logger.trace(Logger.Message(stringLiteral: String(describing: clearResponse)))
+                    logger.info("Filling the knowledge base with required data...")
 
-                _ = try! googleSheetsAdapter?.appendCells(
-                    [
+                    _ = try! googleSheetsAdapter?.appendCells(
                         [
-                            CellValue.string(value: "Evaluating dataset \(dataset)...")
-                        ]
-                    ],
-                    format: .bold
-                )
-                currentMetricsRowOffset += 1
+                            [
+                                CellValue.string(value: "Evaluating dataset \(dataset)...")
+                            ]
+                        ],
+                        format: .bold
+                    )
+                    currentMetricsRowOffset += 1
 
-                // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
-                if let unwrappedBatchSize = batchSize_ {
-                    let ttls = OpenKEImporter(dataset.path, batches: batches, logger: logger).asTtls(batchSize: unwrappedBatchSize)
-                    logger.trace("Generated \(ttls.count) batches for updating the knowledge base")
-                    // for i in 0..<ttls.count {
-                    _ = try! await (0..<ttls.count).asyncMap(nWorkers: nDatasetUploadingWorkers_) { i, _ -> Bool in
-                        logger.trace("Inserting \(i + 1) batch...")
-                        let insertResponse = try! await adapter.insert( 
+                    // OpenKEImporter(unwrappedCorpus, batches: batches).toTtl()
+                    if let unwrappedBatchSize = batchSize_ {
+                        let ttls = OpenKEImporter(dataset.path, batches: batches, logger: logger).asTtls(batchSize: unwrappedBatchSize)
+                        logger.trace("Generated \(ttls.count) batches for updating the knowledge base")
+                        // for i in 0..<ttls.count {
+                        _ = try! await (0..<ttls.count).asyncMap(nWorkers: nDatasetUploadingWorkers_) { i, _ -> Bool in
+                            logger.trace("Inserting \(i + 1) batch...")
+                            let insertResponse = try! await adapter.insert( 
+                                InsertQuery(
+                                    text: ttls[i]
+                                ) // ,
+                                // timeout: 3_600_000
+                            )
+                            logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
+
+                            return true
+                        }
+                        logger.trace("Finished knowledge base update")
+                    } else {
+                        let insertResponse = try! await adapter.insert(
                             InsertQuery(
-                                text: ttls[i]
-                            ) // ,
-                            // timeout: 3_600_000
+                                text: OpenKEImporter(dataset.path, batches: batches).asTtl
+                            ),
+                            timeout: 3_600_000
                         )
                         logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
-
-                        return true
                     }
-                    logger.trace("Finished knowledge base update")
-                } else {
-                    let insertResponse = try! await adapter.insert(
-                        InsertQuery(
-                            text: OpenKEImporter(dataset.path, batches: batches).asTtl
-                        ),
-                        timeout: 3_600_000
-                    )
-                    logger.trace(Logger.Message(stringLiteral: String(describing: insertResponse)))
-                }
 
-                Task {
-                    telegramBot.broadcast("Uploaded \(dataset) to the knowledge base")
+                    Task {
+                        telegramBot.broadcast("Uploaded \(dataset) to the knowledge base")
+                    }
+                } else {
+                    logger.info("Skipping dataset uplaoding to the knowledge base...")
+
+                    Task {
+                        telegramBot.broadcast("Skipped \(dataset) uploading to the knowledge base")
+                    }
                 }
 
                 logger.info("pattern\t\(PatternStats<CountableBindingTypeWithOneRelationAggregation>.header)")
