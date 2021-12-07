@@ -17,20 +17,11 @@ public struct DatasetImpl: CustomStringConvertible {
 }
 
 let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
-<<<<<<< HEAD
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     // DatasetImpl(name: .demo, path: "Demo/0000"),
     DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
     // ModelImpl(architecture: .complex, platform: .openke)
-=======
-    // DatasetImpl(name: .demo, path: "Demo/0000"),
-    // DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
-    // DatasetImpl(name: .wordnet_18, path: "wordnet-18"),
-    // DatasetImpl(name: .wordnet_18_rr, path: "wordnet-18-rr"),
-    // DatasetImpl(name: .fb_13, path: "fb-13"),
-    DatasetImpl(name: .fb_15k, path: "fb-15k"),
->>>>>>> origin/master
 ]
 
 public struct PatternProcessingResult: Sendable {
@@ -97,6 +88,9 @@ public struct CompareDatasets: ParsableCommand {
     @Option(name: .shortAndLong, help: "Maximum number of milliseconds which can be spent on analyzis of a single pattern")
     var samplingTimeout: Int?
 
+    @Flag(name: .shortAndLong, help: "Should send notifications via telegram when progress is updated")
+    var enableNotifications = false
+
     public static var configuration = CommandConfiguration(
         commandName: "compare-datasets",
         abstract: "Evaluate datasets by checking which graph patterns are present in their structure"
@@ -109,6 +103,7 @@ public struct CompareDatasets: ParsableCommand {
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        let patternsEvaluationLogger = Logger(level: verbose ? .trace : .info, label: "patterns-evaluation")
         logger.trace("Executing command \(CommandLine.arguments.joined(separator: " "))...")
 
         let blazegraphHost_ = blazegraphHost
@@ -135,6 +130,7 @@ public struct CompareDatasets: ParsableCommand {
         let verbose_ = verbose
         let doNotUpdate_ = doNotUpdate
         let samplingTimeout_ = samplingTimeout
+        let enableNotifications_ = enableNotifications
 
         // print(OpenKEImporter(unwrappedCorpus, batches: batches).asTtls(batchSize: 5).first!)
         BlockingTask {
@@ -142,11 +138,11 @@ public struct CompareDatasets: ParsableCommand {
             let patterns = Patterns(patternsPath_)
 
             let tracker = DatasetComparisonProgressTracker(nDatasets: DATASETS_FOR_COMPARISON.count, nPatterns: patterns.storage.elements.count)
-            let telegramBot = try! TelegramAdapter(
+            let telegramBot = enableNotifications_ ? try! TelegramAdapter(
                 tracker: tracker,
                 secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"],
                 logger: Logger(level: verbose_ ? .trace : .info, label: "telegram-bot")
-            )
+            ) : nil
 
             let googleSheetsAdapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
 
@@ -154,10 +150,12 @@ public struct CompareDatasets: ParsableCommand {
             var nPatterns = 0
             var datasetTestingResults = [DatasetTestingResult]()
 
-            async let void: () = await telegramBot.run()
+            if let unwrappedTelegramBot = telegramBot {
+                async let void: () = await unwrappedTelegramBot.run()
+            }
             
             Task {
-                telegramBot.broadcast("The bot has started")
+                telegramBot?.broadcast("The bot has started")
             }
 
             // func appendStatCells<BindingType>(_ stats: PatternStats<BindingType>, pattern: String) throws {
@@ -218,7 +216,7 @@ public struct CompareDatasets: ParsableCommand {
             for dataset in DATASETS_FOR_COMPARISON {
 
                 Task {
-                    telegramBot.broadcast("Evaluating dataset \(dataset) on \(patterns.storage.elements.count) patterns...")
+                    telegramBot?.broadcast("Evaluating dataset \(dataset) on \(patterns.storage.elements.count) patterns...")
                 }
 
                 nPatterns = 0
@@ -270,13 +268,13 @@ public struct CompareDatasets: ParsableCommand {
                     }
 
                     Task {
-                        telegramBot.broadcast("Uploaded \(dataset) to the knowledge base")
+                        telegramBot?.broadcast("Uploaded \(dataset) to the knowledge base")
                     }
                 } else {
                     logger.info("Skipping dataset uplaoding to the knowledge base...")
 
                     Task {
-                        telegramBot.broadcast("Skipped \(dataset) uploading to the knowledge base")
+                        telegramBot?.broadcast("Skipped \(dataset) uploading to the knowledge base")
                     }
                 }
 
@@ -302,43 +300,43 @@ public struct CompareDatasets: ParsableCommand {
                     }
                     switch pattern.name {
                         case "symmetric":
-                            let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "symmetric") 
                             return PatternProcessingResult(stats, pattern:"symmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "symmetric")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
-                            let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "antisymmetric") 
                             return PatternProcessingResult(stats, pattern:"antisymmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "antisymmetric")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
-                            let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "equivalence") 
                             return PatternProcessingResult(stats, pattern:"equivalence") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "equivalence")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("equivalence\t\(stats)")
                         case "implication":
-                            let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "implication") 
                             return PatternProcessingResult(stats, pattern:"implication") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "implication")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("implication\t\(stats)")
                         case "reflexive":
-                            let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "reflexive") 
                             return PatternProcessingResult(stats, pattern:"reflexive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "reflexive")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("reflexive\t\(stats)")
                         case "transitive":
-                            let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "transitive") 
                             return PatternProcessingResult(stats, pattern:"transitive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "transitive")
                             // datasetTestingResults.append(stats.asDict)
                             // logger.info("transitive\t\(stats)")
                         case "composition":
-                            let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_) 
+                            let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "composition") 
                             return PatternProcessingResult(stats, pattern:"composition") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "composition")
                             // datasetTestingResults.append(stats.asDict)
@@ -350,7 +348,7 @@ public struct CompareDatasets: ParsableCommand {
                 }.map(appendStatCells)
 
                 Task {
-                    telegramBot.broadcast("Finished \(dataset) evaluation")
+                    telegramBot?.broadcast("Finished \(dataset) evaluation")
                 }
 
                 _ = try! googleSheetsAdapter?.appendCells( // Empty line for visual separation of adjacent dataset testing results
@@ -455,7 +453,7 @@ public struct CompareDatasets: ParsableCommand {
             _ = googleSheetsAdapter?.addNumberFormatRules(numberFormatRanges!.numberFormatRules)
             _ = try! await googleSheetsAdapter?.commit(dryRun: dryRun_)
 
-            telegramBot.broadcast("Completed comparing datasets")
+            telegramBot?.broadcast("Completed comparing datasets")
         } // BlockingTask
     }
 }
