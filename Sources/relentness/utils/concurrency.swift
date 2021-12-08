@@ -62,7 +62,7 @@ extension Collection where Element: Sendable {
 public extension IteratorProtocol {
     mutating func asyncDo<T: Sendable> (
         nWorkers requestedNWorkers: Int? = nil, delay: Double? = nil,
-        transform: @escaping @Sendable (_ item: Element, _ workerIndex: Int, _ index: Int) async throws -> T, until shouldStop: @escaping @Sendable (T) async throws -> Bool
+        transform: @escaping @Sendable (_ item: Element, _ workerIndex: Int, _ index: Int) async throws -> T, until shouldStop: @escaping @Sendable (T, Int) async throws -> Bool
     ) async throws -> [T] {
         let nWorkers = requestedNWorkers ?? DEFAULT_N_WORKERS
 
@@ -102,7 +102,7 @@ public extension IteratorProtocol {
                 result.append((index: index, item: taskResult))
                 try Task.checkCancellation()
 
-                if try await shouldStop(taskResult) {
+                if try await shouldStop(taskResult, index) {
                     break
                 }
 
