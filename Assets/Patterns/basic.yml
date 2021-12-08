@@ -503,6 +503,7 @@ items:
         )
       }
     batch-size: 4
+    enabled: false
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
   #       {
   #         select ?premise where {

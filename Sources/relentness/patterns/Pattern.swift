@@ -75,6 +75,7 @@ public struct Pattern: Codable, Sendable {
     public let positiveBatched: String? // TODO: Delete this
 
     public let batchSize: Int?
+    public let enabled: Bool?
 
     public let totalQuery = CountingQuery(
         text: """
@@ -92,6 +93,7 @@ public struct Pattern: Codable, Sendable {
         case negativeQueryGenerator = "negative-generator"
         case positiveQueryGenerator = "positive-generator"
         case positiveBatched // TODO: Delete this
+        case enabled
     }
 
     public static func fillBatchSizePlaceHolders(_ query: String, limit: Int? = nil, offset: Int? = nil) -> String {
@@ -354,6 +356,12 @@ public struct PatternStats<BindingType: CountableBindingTypeWithAggregation>: Cu
 
 public struct PatternStorage: Codable {
     public let elements: [Pattern]
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+
+        elements = try values.decode([Pattern].self, forKey: .elements).filter{$0.enabled ?? true}
+    }
 
     enum CodingKeys: String, CodingKey {
         case elements = "items"
