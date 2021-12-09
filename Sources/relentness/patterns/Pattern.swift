@@ -13,7 +13,7 @@ public enum PatternKind {
     case positive, negative
 }
 
-private struct BatchIterator: IteratorProtocol {
+struct BatchIterator: IteratorProtocol {
     typealias Element = (limit: Int, offset: Int)
 
     let limit: Int
@@ -28,37 +28,125 @@ private struct BatchIterator: IteratorProtocol {
     }
 }
 
+enum WorkloadDistributionError: Error {
+    case cannotDistributeWorkloadEvenly(item: BatchIterator.Element, index: [Int])
+}
+
 public actor TerminationManager {
-    private var indicesOfEmptyResults = [Int]() 
+    private var indicesOfEmptyResults = [[Int]]() 
     public let minConsecutiveEmptyResults = 3
 
-    public func shouldStop<Element>(results: [Element], index: Int) -> Bool {
+    private static func getPreviousIndex(_ index: [Int]) -> [Int] {
+        let indexLength = index.count
+        var lastDecrementableDimension: Int = 0
+
+        for i in (1..<indexLength).reversed() {
+            if index[i] > 0 {
+               lastDecrementableDimension = i
+               break
+            }
+        }
+
+        return (0..<lastDecrementableDimension).map{index[$0]} + [index[lastDecrementableDimension] - 1] // + ((lastDecrementableDimension + 1)..<indexLength).map{_ in nil}
+    }
+
+    private static func doesMatchPreviousIndex(_ index: [Int], _ previousIndex: [Int]) -> Bool {
+        if index.count < previousIndex.count {
+            return false
+        } 
+
+        for i in 0..<previousIndex.count {
+            if index[i] != previousIndex[i] {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    public func findPreviousIndex(_ index: [Int]) -> [Int]? {
+        let previousIndex = TerminationManager.getPreviousIndex(index)
+
+        let candidatePreviousIndices = indicesOfEmptyResults.filter{
+            TerminationManager.doesMatchPreviousIndex($0, previousIndex)
+        }
+
+        if candidatePreviousIndices.count < 1 {
+            return nil
+        }
+
+        if candidatePreviousIndices.count == 1 {
+            return candidatePreviousIndices.first!
+        }
+
+        return candidatePreviousIndices.sorted{
+            for i in 0..<[$0.count, $1.count].min()! {
+                if $0[i] < $1[i] {
+                   return true
+                } else if $0[i] > $1[i] {
+                    return false
+                } 
+            } 
+
+            return $0.count < $1.count
+        }.last!
+    }
+
+    public func shouldStop<Element>(results: [Element], index: [Int]) -> Bool {
         if results.count > 0 {
             return false
         } 
 
-        for i in 1..<minConsecutiveEmptyResults {
-            if !indicesOfEmptyResults.contains(index - i) {
+        var currentIndex = index
+
+        for _ in 1..<minConsecutiveEmptyResults {
+            guard let nextIndex = findPreviousIndex(currentIndex) else {
                 indicesOfEmptyResults.append(index)
                 return false
             }
+            currentIndex = nextIndex
+            // if !indicesOfEmptyResults.contains(index - i) {
+            //     indicesOfEmptyResults.append(index)
+            //     return false
+            // }
         }
         return true
     }
 
-    public func shouldStop(receivedStopIndicator: Bool, index: Int) -> Bool {
+    public func shouldStop(receivedStopIndicator: Bool, index: [Int]) -> Bool {
         if !receivedStopIndicator {
             return false
         } 
 
-        for i in 1..<minConsecutiveEmptyResults {
-            if !indicesOfEmptyResults.contains(index - i) {
+        var currentIndex = index
+
+        for _ in 1..<minConsecutiveEmptyResults {
+            guard let nextIndex = findPreviousIndex(currentIndex) else {
                 indicesOfEmptyResults.append(index)
                 return false
             }
+            currentIndex = nextIndex
+            // if !indicesOfEmptyResults.contains(index - i) {
+            //     indicesOfEmptyResults.append(index)
+            //     return false
+            // }
         }
         return true
     }
+
+    // public func shouldStop(receivedStopIndicator: Bool, index: Int) -> Bool {
+    //     if !receivedStopIndicator {
+    //         return false
+    //     } 
+
+    //     for i in 1..<minConsecutiveEmptyResults {
+    //         if !indicesOfEmptyResults.contains(index - i) {
+    //             indicesOfEmptyResults.append(index)
+    //             return false
+    //         }
+    //     }
+    //     return true
+    // }
 }
 
 public struct Pattern: Codable, Sendable {
@@ -148,25 +236,59 @@ public struct Pattern: Codable, Sendable {
 
             if let generatorUnwrapped = queryGenerator, generatorUnwrapped.containsPatternPlaceHolders {
                 let terminationManager = TerminationManager()
-                print("Query generator:")
-                print(try await adapter.sample(getQueryGenerator(generatorUnwrapped, limit: 16, offset: 48), timeout: timeout).query)
+                // print("Query generator:")
+                // print(try await adapter.sample(getQueryGenerator(generatorUnwrapped, limit: 16, offset: 48), timeout: timeout).query)
 
                 var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
 
+                let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
+                    do {
+                        return try await measureExecutionTime { () -> Sample<BindingType> in
+                            try await adapter.sample(
+                                getQuery(
+                                    try await adapter.sample(
+                                        getQueryGenerator(generatorUnwrapped, limit: item.limit, offset: item.offset),
+                                        timeout: timeout
+                                    ).query
+                                ),
+                                timeout: timeout
+                            )
+                        } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
+                            logger.trace(
+                                "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
+                                "count = \(sample.count)) for " +
+                                ((kind ?? .positive) == .negative ? "negative " : "") +
+                                "pattern \(pattern ?? "")"
+                            )
+                            return sample
+                        }
+                    } catch {
+                        logger.error("Failed \(index)th query: \(error)")
+                        throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error)
+                    }
+                } until: { sample, index in
+                    await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
+                    // sample.nBindings == 0
+                } truncateElement: { item, index in
+                    if item.limit % 2 != 0 {
+                        throw WorkloadDistributionError.cannotDistributeWorkloadEvenly(item: item, index: index)
+                    }
+
+                    return [(item: (limit: item.limit / 2, offset: item.offset), index: index + [0]), (item: (limit: item.limit / 2, offset: item.offset + item.limit / 2), index: index + [1])]
+                }
+
+                return try join(samples)
+            } else if query.containsPatternPlaceHolders {
+                var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
+                let terminationManager = TerminationManager()
+
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, _, index) in
                     try await measureExecutionTime { () -> Sample<BindingType> in
-                        try await adapter.sample(
-                            getQuery(
-                                try await adapter.sample(
-                                    getQueryGenerator(generatorUnwrapped, limit: item.limit, offset: item.offset),
-                                    timeout: timeout
-                                ).query
-                            ),
-                            timeout: timeout
-                        )
+                        try await adapter.sample(getQuery(query, limit: item.limit, offset: item.offset), timeout: timeout)
                     } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                         logger.trace(
-                            "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
+                            "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
+                            "count = \(sample.count)) for " +
                             ((kind ?? .positive) == .negative ? "negative " : "") +
                             "pattern \(pattern ?? "")"
                         )
@@ -175,25 +297,8 @@ public struct Pattern: Codable, Sendable {
                 } until: { sample, index in
                     await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
                     // sample.nBindings == 0
-                }
-
-                return try join(samples)
-            } else if query.containsPatternPlaceHolders {
-                var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
-
-                let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, _, index) in
-                    try await measureExecutionTime { () -> Sample<BindingType> in
-                        try await adapter.sample(getQuery(query, limit: item.limit, offset: item.offset), timeout: timeout)
-                    } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                        logger.trace(
-                            "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
-                            ((kind ?? .positive) == .negative ? "negative " : "") +
-                            "pattern \(pattern ?? "")"
-                        )
-                        return sample
-                    }
-                } until: { sample, _ in
-                    sample.nBindings == 0
+                } truncateElement: { item, index in
+                    [(item: item, index: index)]
                 }
 
                 return try join(samples)

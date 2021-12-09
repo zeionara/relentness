@@ -1,5 +1,6 @@
 items:
   - name: symmetric
+    enabled: false
     positive: |-
       select (count(?h) as ?count) (?r as ?relation) where {
         ?h ?r ?t.
@@ -16,6 +17,7 @@ items:
       group by ?r
       order by desc(?count)
   - name: antisymmetric
+    enabled: false
     positive: |-
       select (count(?h) as ?count) ?forward ?backward where {                                                                                                                                             
         ?h ?forward ?t.                                                                                                                                                                                        
@@ -36,6 +38,7 @@ items:
       group by ?forward ?backward
       order by desc(?count)
   - name: equivalence
+    enabled: false
     positive: |-
       select (count(?h) as ?count) ?primary ?secondary where {
         ?h ?primary ?t.
@@ -55,6 +58,7 @@ items:
       group by ?primary ?secondary
       order by desc(?count)
   - name: implication
+    enabled: false
     # positive: |-
     #   select (sum(?partial_count) as ?count) ?original ?derivative {
     #     {
@@ -337,6 +341,7 @@ items:
 #      group by ?original ?derivative
 #      order by desc(?count)
   - name: reflexive
+    enabled: false
     positive: |-
       select (count(?h) as ?count) ?loopback {
         ?h ?loopback ?h
@@ -356,6 +361,7 @@ items:
       group by ?loopback
       order by desc(?count)
   - name: transitive
+    enabled: false
     positive: |-
       select (count(?h) as ?count) ?translator {
         ?h ?translator ?t, ?n.
@@ -453,7 +459,7 @@ items:
         
         bind(
           concat(
-            "select (count(*) as ?count) ?premise ?statement ?conclusion with { select distinct ?relation where { [] ?relation [] } } as %relations with { select ?premise ?statement ?conclusion { ",
+            "select (count(*) as ?count) ?premise ?statement ?conclusion with { select distinct ?relation where { [] ?relation [] } order by ?relation } as %relations with { select ?premise ?statement ?conclusion { ",
             if (
               ?offset_1 = 0 && ?offset_2 = 0,
               concat(
@@ -503,7 +509,7 @@ items:
         )
       }
     batch-size: 4
-    enabled: false
+    # enabled: false
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
   #       {
   #         select ?premise where {
