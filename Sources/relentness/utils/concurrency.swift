@@ -80,7 +80,7 @@ struct Queue<T> {
 }
 
 enum TaskExecitionError<Element>: Error {
-    case taskHasFailed(item: Element, index: [Int], workerIndex: Int, reason: Error) 
+    case taskHasFailed(item: Element, index: [Int], workerIndex: Int, reason: Error, retry: Bool) 
 }
 
 public extension IteratorProtocol {
@@ -166,13 +166,17 @@ public extension IteratorProtocol {
 
                     print("Task execution error: \(error)")
 
-                    if case TaskExecitionError<Element>.taskHasFailed(let item, let index, let workerIndex, _) = error {
+                    if case TaskExecitionError<Element>.taskHasFailed(let item, let index, let workerIndex, _, let retry) = error {
                         print("Index of failed task = \(index), item = \(item)")
-                        
-                        let truncated = try truncateElement(item, index)
-                        print("Repeating with truncated elements \(truncated)")
 
-                        truncatedElements.enqueue(contentsOf: truncated)
+                        if retry {
+                            let truncated = try truncateElement(item, index)
+                            print("Repeating with truncated elements \(truncated)")
+
+                            truncatedElements.enqueue(contentsOf: truncated)
+                        } else {
+                            throw error
+                        }
 
                         print("Submitting next task instead of failed one")
                         _ = try await submitNext(workerIndex)

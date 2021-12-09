@@ -32,9 +32,13 @@ enum WorkloadDistributionError: Error {
     case cannotDistributeWorkloadEvenly(item: BatchIterator.Element, index: [Int])
 }
 
+enum QueryGenerationError: Error {
+    case cannotGenerateQuery(comment: String)
+}
+
 public actor TerminationManager {
     private var indicesOfEmptyResults = [[Int]]() 
-    public let minConsecutiveEmptyResults = 3
+    public let minConsecutiveEmptyResults = 30
 
     private static func getPreviousIndex(_ index: [Int]) -> [Int] {
         let indexLength = index.count
@@ -244,18 +248,25 @@ public struct Pattern: Codable, Sendable {
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
                     do {
                         return try await measureExecutionTime { () -> Sample<BindingType> in
-                            try await adapter.sample(
-                                getQuery(
+                            let query: CountingQueryWithAggregation<BindingType> = getQuery(
                                     try await adapter.sample(
                                         getQueryGenerator(generatorUnwrapped, limit: item.limit, offset: item.offset),
                                         timeout: timeout
                                     ).query
-                                ),
+                                )
+
+                            if query.text.starts(with: "ERROR:") {
+                                throw QueryGenerationError.cannotGenerateQuery(comment: query.text)
+                            }
+                            // print("\(index)th query*:")
+                            // print(query.text)
+                            return try await adapter.sample(
+                                query,
                                 timeout: timeout
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                             logger.trace(
-                                "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
+                                "Processed \(index)th query batch using query generator (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
                                 "count = \(sample.count)) for " +
                                 ((kind ?? .positive) == .negative ? "negative " : "") +
                                 "pattern \(pattern ?? "")"
@@ -264,7 +275,13 @@ public struct Pattern: Codable, Sendable {
                         }
                     } catch {
                         logger.error("Failed \(index)th query: \(error)")
-                        throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error)
+
+                        switch error {
+                            case QueryGenerationError.cannotGenerateQuery:
+                                throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: false)
+                            default:
+                                throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: true)
+                        }
                     }
                 } until: { sample, index in
                     await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
@@ -284,7 +301,10 @@ public struct Pattern: Codable, Sendable {
 
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, _, index) in
                     try await measureExecutionTime { () -> Sample<BindingType> in
-                        try await adapter.sample(getQuery(query, limit: item.limit, offset: item.offset), timeout: timeout)
+                        let query: CountingQueryWithAggregation<BindingType> = getQuery(query, limit: item.limit, offset: item.offset)
+                        // print("\(index)th query: ")
+                        // print(query.text)
+                        return try await adapter.sample(query, timeout: timeout)
                     } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                         logger.trace(
                             "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
