@@ -158,11 +158,12 @@ public struct Pattern: Codable, Sendable {
     fileprivate static let offsetPlaceHolder = "{{offset}}"
 
     public let name: String
-    public let positiveQueryText: String
-    public let negativeQueryText: String
 
-    public let negativeQueryGenerator: String?
-    public let positiveQueryGenerator: String?
+    public let positiveQueryText: PatternQuery
+    public let negativeQueryText: PatternQuery
+
+    public let negativeQueryGenerator: PatternQuery?
+    public let positiveQueryGenerator: PatternQuery?
 
     public let positiveBatched: String? // TODO: Delete this
 
@@ -356,11 +357,16 @@ public struct Pattern: Codable, Sendable {
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
-
         return try await measureExecutionTime {
             (
-                positive: try await getSample(adapter, query: positiveQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator),
-                negative: try await getSample(adapter, query: negativeQueryText, timeout: timeout, logger: logger, pattern: pattern, kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator),
+                positive: try await getSample(
+                    adapter, query: positiveQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
+                    kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator?.getText(name: name)
+                ),
+                negative: try await getSample(
+                    adapter, query: negativeQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
+                    kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator?.getText(name: name)
+                ),
                 total: try await getTotalSample(adapter, timeout: timeout) // TODO: Extend signature according to the positive and negative pattern evaluators
             )
         } handleExecutionTimeMeasurement: { (samples, executionTime) in

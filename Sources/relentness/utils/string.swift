@@ -96,3 +96,17 @@ public extension String {
     }
 }
 
+public extension String {
+    func capitalizingFirstLetter() -> String {
+        return prefix(1).capitalized + dropFirst()
+    }
+
+    func fromKebabToCamelCase(with separator: Character = "-") -> String {
+        return self.lowercased()
+            .split(separator: separator)
+            .enumerated()
+            .map { $0.offset > 0 ? $0.element.capitalized : $0.element.lowercased() }
+            .joined()
+    }
+}
+
