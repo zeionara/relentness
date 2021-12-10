@@ -424,8 +424,8 @@ items:
       }
       group by ?premise ?statement ?conclusion
       order by desc(?count)
-    negative-generator: from NegativeGenerator.rq
-    batch-size: 8
+    negative-generator: from NegativeGeneratorExtended.rq
+    batch-size: 64
     # enabled: false
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
   #       {

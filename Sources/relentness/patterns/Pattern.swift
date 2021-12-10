@@ -357,6 +357,7 @@ public struct Pattern: Codable, Sendable {
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
+        // print("Negative query generaor = \(String(describing: negativeQueryGenerator?.getText(name: name)))")
         return try await measureExecutionTime {
             (
                 positive: try await getSample(
