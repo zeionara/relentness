@@ -32,9 +32,9 @@ enum WorkloadDistributionError: Error {
     case cannotDistributeWorkloadEvenly(item: BatchIterator.Element, index: [Int])
 }
 
-enum QueryGenerationError: Error {
-    case cannotGenerateQuery(comment: String)
-}
+// enum QueryGenerationError: Error {
+//     case cannotGenerateQuery(comment: String)
+// }
 
 public actor TerminationManager {
     private var indicesOfEmptyResults = [[Int]]() 
@@ -256,11 +256,14 @@ public struct Pattern: Codable, Sendable {
                                     ).query
                                 )
 
-                            if query.text.starts(with: "ERROR:") {
-                                throw QueryGenerationError.cannotGenerateQuery(comment: query.text)
-                            }
+                            // if query.text.starts(with: "ERROR:") {
+                            //     throw QueryGenerationError.cannotGenerateQuery(comment: query.text)
+                            // }
                             // print("\(index)th query*:")
                             // print(query.text)
+                            
+                            try QueryGenerationError.fromGeneratedQuery(query: query)
+
                             return try await adapter.sample(
                                 query,
                                 timeout: timeout
@@ -278,15 +281,17 @@ public struct Pattern: Codable, Sendable {
                         logger.error("Failed \(index)th query: \(error)")
 
                         switch error {
+                            case QueryGenerationError.stopIteration:
+                                throw TaskExecitionError.stopIteration(item: item, index: index, workerIndex: workerIndex, reason: error, retry: false)
                             case QueryGenerationError.cannotGenerateQuery:
                                 throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: false)
                             default:
                                 throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: true)
                         }
                     }
-                } until: { sample, index in
-                    await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
-                    // sample.nBindings == 0
+                // } until: { sample, index in
+                //     await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
+                //     // sample.nBindings == 0
                 } truncateElement: { item, index in
                     if item.limit % 2 != 0 {
                         throw WorkloadDistributionError.cannotDistributeWorkloadEvenly(item: item, index: index)

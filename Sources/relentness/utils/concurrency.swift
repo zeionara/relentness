@@ -81,6 +81,7 @@ struct Queue<T> {
 
 enum TaskExecitionError<Element>: Error {
     case taskHasFailed(item: Element, index: [Int], workerIndex: Int, reason: Error, retry: Bool) 
+    case stopIteration(item: Element, index: [Int], workerIndex: Int, reason: Error, retry: Bool) 
 }
 
 public extension IteratorProtocol {
@@ -88,7 +89,8 @@ public extension IteratorProtocol {
 
     mutating func asyncDo<T: Sendable> (
         nWorkers requestedNWorkers: Int? = nil, delay: Double? = nil,
-        transform: @escaping @Sendable (_ item: Element, _ workerIndex: Int, _ index: [Int]) async throws -> T, until shouldStop: @escaping @Sendable (T, [Int]) async throws -> Bool,
+        transform: @escaping @Sendable (_ item: Element, _ workerIndex: Int, _ index: [Int]) async throws -> T,
+        until shouldStop: @escaping @Sendable (T, [Int]) async throws -> Bool = {(_, _) in false},
         truncateElement: @escaping @Sendable (_ item: Element, _ index: [Int]) throws -> [TruncatedElement]
     ) async throws -> [T] {
         let nWorkers = requestedNWorkers ?? DEFAULT_N_WORKERS
@@ -105,10 +107,10 @@ public extension IteratorProtocol {
                 let unwrappedWorkerIndex = workerIndex ?? submitted
                 
                 if let truncatedElement = truncatedElements.dequeue() {
-                    print("Fetched truncated element with index \(index)")
-
                     let item = truncatedElement.item
                     let index = truncatedElement.index
+
+                    print("Fetched truncated element with index \(index)")
 
                     group.addTask { [submitted, unwrappedWorkerIndex, item] in
                         let value = try await transform(item, unwrappedWorkerIndex, index)
@@ -140,10 +142,15 @@ public extension IteratorProtocol {
             // as each task completes, submit a new task until we run out of work
 
             var continueSubmittingTasks = true
+            var gotStopIterationMarker = false
             var nConsecutiveErrors = 0 // TODO: Implement a task submission rate reduction strategy
 
             while continueSubmittingTasks {
                 print("Submitting tasks...")
+                if gotStopIterationMarker {
+                    continueSubmittingTasks = false
+                }
+
                 do {
                     for try await (index, workerIndex, taskResult) in group {
                         result.append((index: index, item: taskResult))
@@ -166,7 +173,10 @@ public extension IteratorProtocol {
 
                     print("Task execution error: \(error)")
 
-                    if case TaskExecitionError<Element>.taskHasFailed(let item, let index, let workerIndex, _, let retry) = error {
+                    if case TaskExecitionError<Element>.stopIteration(let item, let index, _, _, _) = error {
+                        print("Stop iteration after task = \(index), item = \(item)")
+                        gotStopIterationMarker = true
+                    } else if case TaskExecitionError<Element>.taskHasFailed(let item, let index, let workerIndex, _, let retry) = error {
                         print("Index of failed task = \(index), item = \(item)")
 
                         if retry {
