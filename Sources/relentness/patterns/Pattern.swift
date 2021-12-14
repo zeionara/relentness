@@ -238,9 +238,8 @@ public struct Pattern: Codable, Sendable {
         // print("Getting positive sample...")
 
         if let batchSizeUnwrapped = batchSize {
-
             if let generatorUnwrapped = queryGenerator, generatorUnwrapped.containsPatternPlaceHolders {
-                let terminationManager = TerminationManager()
+                // let terminationManager = TerminationManager()
                 // print("Query generator:")
                 // print(try await adapter.sample(getQueryGenerator(generatorUnwrapped, limit: 16, offset: 48), timeout: timeout).query)
 
@@ -305,20 +304,25 @@ public struct Pattern: Codable, Sendable {
                 var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
                 let terminationManager = TerminationManager()
 
-                let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, _, index) in
-                    try await measureExecutionTime { () -> Sample<BindingType> in
-                        let query: CountingQueryWithAggregation<BindingType> = getQuery(query, limit: item.limit, offset: item.offset)
-                        // print("\(index)th query: ")
-                        // print(query.text)
-                        return try await adapter.sample(query, timeout: timeout)
-                    } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                        logger.trace(
-                            "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
-                            "count = \(sample.count)) for " +
-                            ((kind ?? .positive) == .negative ? "negative " : "") +
-                            "pattern \(pattern ?? "")"
-                        )
-                        return sample
+                let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
+                    do {
+                        return try await measureExecutionTime { () -> Sample<BindingType> in
+                            let query: CountingQueryWithAggregation<BindingType> = getQuery(query, limit: item.limit, offset: item.offset)
+                            // print("\(index)th query: ")
+                            // print(query.text)
+                            return try await adapter.sample(query, timeout: timeout)
+                        } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
+                            logger.trace(
+                                "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
+                                "count = \(sample.count)) for " +
+                                ((kind ?? .positive) == .negative ? "negative " : "") +
+                                "pattern \(pattern ?? "")"
+                            )
+                            return sample
+                        }
+                    } catch {
+                        logger.error("Failed \(index)th query: \(error)")
+                        throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: true)
                     }
                 } until: { sample, index in
                     await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)

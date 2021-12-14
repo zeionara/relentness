@@ -38,6 +38,7 @@ public struct PatternQuery: CustomStringConvertible, Codable, Sendable {
         // print("\(PatternQuery.queriesRootPath)/\(name.fromKebabToCamelCase().capitalizingFirstLetter())/\(configPath!)")
         // print(configPath)
         // print(configText)
+        // print("\(PatternQuery.queriesRootPath)/\(name.fromKebabToCamelCase().capitalizingFirstLetter())/\(configPath ?? "foo bar")")
         if let path = configPath, let contents = try? String(
             contentsOf: URL.local("\(PatternQuery.queriesRootPath)/\(name.fromKebabToCamelCase().capitalizingFirstLetter())/\(path)")!,
         encoding: .utf8) {
