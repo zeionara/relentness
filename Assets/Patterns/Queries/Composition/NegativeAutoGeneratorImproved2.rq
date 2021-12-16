@@ -1,0 +1,253 @@
+select ?query {
+  {
+    select (count(distinct ?relation) as ?n_relations) where {
+      [] ?relation []
+    }
+  }
+
+  bind({{offset}} as ?offset_0)
+  bind({{limit}} as ?limit_0)
+
+  bind(?n_relations * ?n_relations * ?n_relations as ?n_entries)
+
+  # offset
+
+  bind(floor(?offset_0 / ?n_relations) as ?offset_3_quotient)
+  bind(?offset_0 - ?offset_3_quotient * ?n_relations as ?offset_3)
+
+  bind(floor(?offset_3_quotient / ?n_relations) as ?offset_1)
+  bind(?offset_3_quotient - ?offset_1 * ?n_relations as ?offset_2)
+
+  # limit
+ 
+  bind(floor(?limit_0 / ?n_relations) as ?limit_3_min_quotient)
+  bind(?limit_0 - ?limit_3_min_quotient * ?n_relations as ?limit_3_max)
+  bind(?n_relations - ?offset_3  as ?n_relations_sub_offset_3)
+  bind(if (?limit_3_min_quotient > 0 || ?n_relations_sub_offset_3 < ?limit_3_max,?n_relations_sub_offset_3,?limit_3_max) as ?limit_3_1)
+
+  bind(?limit_0 - ?limit_3_1 as ?limit_0_updated)
+  bind(floor(?limit_0_updated / ?n_relations) as ?limit_3_quotient)
+  bind(?limit_0_updated - ?limit_3_quotient * ?n_relations as ?limit_3_2)
+  bind(?limit_3_1 + ?limit_3_2 as ?limit_3)
+
+  bind(floor(?limit_3_quotient / ?n_relations) as ?limit_2_min_quotient)
+  bind(?limit_3_quotient - ?limit_2_min_quotient * ?n_relations as ?limit_2_max)
+  bind(?n_relations - ?offset_2  - 1 as ?n_relations_sub_offset_2)
+  bind(if (?limit_2_min_quotient > 0 || ?n_relations_sub_offset_2 < ?limit_2_max,?n_relations_sub_offset_2,?limit_2_max) as ?limit_2_1)
+
+  bind(?limit_3_quotient - ?limit_2_1 as ?limit_3_quotient_updated)
+  bind(floor(?limit_3_quotient_updated / ?n_relations) as ?limit_1)
+  bind(?limit_3_quotient_updated - ?limit_1 * ?n_relations as ?limit_2_2)
+  bind(?limit_2_1 + ?limit_2_2 as ?limit_2)
+
+  bind(
+    if(
+      ?limit_0 >= ?n_entries,
+      concat("ERROR: Batch size must be less than ", str(?n_entries)),
+      if(
+        ?offset_0 >= ?n_entries,
+        concat("ERROR: Stop iteration when generating query with offset ", str(?offset_0)),
+        concat(
+          "select (count(*) as ?count) ?premise ?statement ?conclusion ",
+          "with {",
+            "select distinct ?relation where {",
+              "[] ?relation []",
+            "} order by ?relation",
+          "} as %relations ",
+          "with {",
+            "select ?premise ?statement ?conclusion {",
+              if(
+                ?limit_2 = 0 && ?limit_1 = 0,
+                concat(
+                  " { ",
+                    " { ",
+                      "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                    " } ",
+                    " { ",
+                      "select (?relation as ?statement) { include %relations } offset ", str(?offset_2), " limit 1",
+                    " } ",
+                    " { ",
+                      "select (?relation as ?conclusion) { include %relations } offset ", str(?offset_3), " limit ", str(?limit_3_1),
+                    " } ",
+                  " } ",
+                  " union ",
+                  if(
+                    ?offset_2 + 1 < ?n_relations,
+                    concat(
+                      " { ",
+                        " { ",
+                          "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                        " } ",
+                        " { ",
+                          "select (?relation as ?statement) { include %relations } offset ", str(?offset_2 + 1), " limit 1",
+                        " } ",
+                        " { ",
+                          "select (?relation as ?conclusion) { include %relations } limit ", str(?limit_3_2),
+                        " } ",
+                      " } "
+                    ),
+                    concat(
+                      " { ",
+                        " { ",
+                          "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + 1), " limit 1",
+                        " } ",
+                        " { ",
+                          "select (?relation as ?statement) { include %relations } limit 1",
+                        " } ",
+                        " { ",
+                          "select (?relation as ?conclusion) { include %relations } limit ", str(?limit_3_2),
+                        " } ",
+                      " } "
+                    )
+                  )
+                ),
+                if(
+                  ?limit_1 = 0,
+                  concat(
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?statement) { include %relations } offset ", str(?offset_2), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?conclusion) { include %relations } offset ", str(?offset_3), " limit ", str(?limit_3_1),
+                      " } ",
+                    " } ",
+                    " union ",
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?statement) { include %relations } offset ", str(?offset_2 + 1), " limit ", str(?limit_2_1),
+                      " } ",
+                      " { ",
+                          "select (?relation as ?conclusion) { include %relations }",
+                      " } ",
+                    " } ",
+                    " union ",
+                    if(
+                      ?offset_2 + ?limit_2_1 + 1 < ?n_relations,
+                      concat(
+                        " { ",
+                          " { ",
+                            "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?statement) { include %relations } offset ", str(?offset_2 + ?limit_2_1 + 1), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?conclusion) { include %relations } limit ", str(?limit_3_2),
+                          " } ",
+                        " } "
+                      ),
+                      concat(
+                        " { ",
+                          " { ",
+                            "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + 1), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?statement) { include %relations } limit ", str(?limit_2_2),
+                          " } ",
+                          " { ",
+                              "select (?relation as ?conclusion) { include %relations }",
+                          " } ",
+                        " } ",
+                        " union ",
+                        " { ",
+                          " { ",
+                            "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + 1), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?statement) { include %relations } offset ", str(?limit_2_2), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?conclusion) { include %relations } limit ", str(?limit_3_2),
+                          " } ",
+                        " } "
+                      )
+                    )
+                  ),
+                  concat(
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?statement) { include %relations } offset ", str(?offset_2), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?conclusion) { include %relations } offset ", str(?offset_3), " limit ", str(?limit_3_1),
+                      " } ",
+                    " } ",
+                    " union ",
+                    " { ",
+                      if(
+                        ?offset_2 + 1 < ?n_relations,
+                        concat(
+                          " { ",
+                            "select (?relation as ?premise) { include %relations } offset ", str(?offset_1), " limit 1",
+                          " } ",
+                          " { ",
+                            "select (?relation as ?statement) { include %relations } offset ", str(?offset_2 + 1), " limit ", str(?limit_2_1),
+                          " } ",
+                          " { ",
+                              "select (?relation as ?conclusion) { include %relations }",
+                          " } "
+                        ), ""
+                      ),
+                    " } ",
+                    " union ",
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + 1), " limit ", str(?limit_1),
+                      " } ",
+                      " { ",
+                          "select (?relation as ?statement) { include %relations }",
+                      " } ",
+                      " { ",
+                          "select (?relation as ?conclusion) { include %relations }",
+                      " } ",
+                    " } ",
+                    " union ",
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + ?limit_1 + 1), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?statement) { include %relations } limit ", str(?limit_2_2),
+                      " } ",
+                      " { ",
+                          "select (?relation as ?conclusion) { include %relations }",
+                      " } ",
+                    " } ",
+                    " union ",
+                    " { ",
+                      " { ",
+                        "select (?relation as ?premise) { include %relations } offset ", str(?offset_1 + ?limit_1 + 1), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?statement) { include %relations } offset ", str(?limit_2_2), " limit 1",
+                      " } ",
+                      " { ",
+                        "select (?relation as ?conclusion) { include %relations } limit ", str(?limit_3_2),
+                      " } ",
+                    " } "
+                  )
+                )
+              ),
+            " } ",
+          " } as %relations_ ",
+          "where {",
+            "include %relations_",
+            "?h ?premise ?t. ?t ?statement ?n. filter(!exists{?h ?conclusion ?n})",
+          "} group by ?premise ?statement ?conclusion ",
+          "order by desc(?count)"
+        )
+      )
+    )
+    as ?query
+  )
+}
