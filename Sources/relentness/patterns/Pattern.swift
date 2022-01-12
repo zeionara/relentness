@@ -3,6 +3,10 @@ import Yams
 import wickedData
 import Logging
 
+public let maxNWastedAttempts: Int = 10
+public let initialDelay: Double = 0.5
+public let maxTimeout: Int = 3600_000_000 // 1 0000 hours
+
 public extension String {
     var containsPatternPlaceHolders: Bool {
         contains(Pattern.limitPlaceHolder) && contains(Pattern.offsetPlaceHolder)
@@ -235,15 +239,19 @@ public struct Pattern: Codable, Sendable {
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
         logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-        // print("Getting positive sample...")
+        print("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
 
         if let batchSizeUnwrapped = batchSize {
+            // print("baz")
+            // print(queryGenerator)
             if let generatorUnwrapped = queryGenerator, generatorUnwrapped.containsPatternPlaceHolders {
                 // let terminationManager = TerminationManager()
                 // print("Query generator:")
                 // print(try await adapter.sample(getQueryGenerator(generatorUnwrapped, limit: 16, offset: 48), timeout: timeout).query)
 
+                // print("foo")
                 var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
+                // print("bar")
 
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
                     do {
@@ -251,7 +259,9 @@ public struct Pattern: Codable, Sendable {
                             let query: CountingQueryWithAggregation<BindingType> = getQuery(
                                     try await adapter.sample(
                                         getQueryGenerator(generatorUnwrapped, limit: item.limit, offset: item.offset),
-                                        timeout: timeout
+                                        timeout: item.limit == 1 ? maxTimeout : timeout,
+                                        maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
+                                        delay: initialDelay
                                     ).query
                                 )
 
@@ -265,7 +275,9 @@ public struct Pattern: Codable, Sendable {
 
                             return try await adapter.sample(
                                 query,
-                                timeout: timeout
+                                timeout: item.limit == 1 ? maxTimeout : timeout,
+                                maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
+                                delay: initialDelay
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                             logger.trace(
@@ -310,7 +322,12 @@ public struct Pattern: Codable, Sendable {
                             let query: CountingQueryWithAggregation<BindingType> = getQuery(query, limit: item.limit, offset: item.offset)
                             // print("\(index)th query: ")
                             // print(query.text)
-                            return try await adapter.sample(query, timeout: timeout)
+                            return try await adapter.sample(
+                                query,
+                                timeout: item.limit == 1 ? maxTimeout : timeout,
+                                maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
+                                delay: initialDelay
+                            )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                             logger.trace(
                                 "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
@@ -335,13 +352,20 @@ public struct Pattern: Codable, Sendable {
             }
         }
 
+        // print("WTD")
+
         // return try await adapter.sample(
         //     getQuery(query),
         //     timeout: timeout
         // )
 
         return try await measureExecutionTime { () -> Sample<BindingType> in
-            try await adapter.sample(getQuery(query), timeout: timeout)
+            try await adapter.sample(
+                getQuery(query),
+                timeout: maxTimeout, // timeout,
+                maxNWastedAttempts: 1, // maxNWastedAttempts,
+                delay: initialDelay
+            )
         } handleExecutionTimeMeasurement: { sample, executionTime in 
             logger.trace(
                 "Processed query (n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
