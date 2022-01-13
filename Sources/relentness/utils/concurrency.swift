@@ -110,7 +110,7 @@ public extension IteratorProtocol {
                     let item = truncatedElement.item
                     let index = truncatedElement.index
 
-                    print("Fetched truncated element with index \(index)")
+                    // print("Fetched truncated element with index \(index)")
 
                     group.addTask { [submitted, unwrappedWorkerIndex, item] in
                         let value = try await transform(item, unwrappedWorkerIndex, index)
@@ -146,7 +146,7 @@ public extension IteratorProtocol {
             var nConsecutiveErrors = 0 // TODO: Implement a task submission rate reduction strategy
 
             while continueSubmittingTasks {
-                print("Submitting tasks...")
+                // print("Submitting tasks...")
                 if gotStopIterationMarker {
                     continueSubmittingTasks = false
                 }
@@ -171,24 +171,24 @@ public extension IteratorProtocol {
                 } catch {
                     nConsecutiveErrors += 1
 
-                    print("Task execution error: \(error)")
+                    // print("Task execution error: \(error)")
 
                     if case TaskExecitionError<Element>.stopIteration(let item, let index, _, _, _) = error {
-                        print("Stop iteration after task = \(index), item = \(item)")
+                        // print("Stop iteration after task = \(index), item = \(item)")
                         gotStopIterationMarker = true
                     } else if case TaskExecitionError<Element>.taskHasFailed(let item, let index, let workerIndex, _, let retry) = error {
-                        print("Index of failed task = \(index), item = \(item)")
+                        // print("Index of failed task = \(index), item = \(item)")
 
                         if retry {
                             let truncated = try truncateElement(item, index)
-                            print("Repeating with truncated elements \(truncated)")
+                            // print("Repeating with truncated elements \(truncated)")
 
                             truncatedElements.enqueue(contentsOf: truncated)
                         } else {
                             throw error
                         }
 
-                        print("Submitting next task instead of failed one")
+                        // print("Submitting next task instead of failed one")
                         _ = try await submitNext(workerIndex)
                     } else {
                         // truncatedElements.enqueue(contentsOf: truncateElement(

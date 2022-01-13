@@ -239,7 +239,7 @@ public struct Pattern: Codable, Sendable {
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
         logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-        print("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
+        logger.trace("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
 
         if let batchSizeUnwrapped = batchSize {
             // print("baz")
@@ -261,7 +261,8 @@ public struct Pattern: Codable, Sendable {
                                         getQueryGenerator(generatorUnwrapped, limit: item.limit, offset: item.offset),
                                         timeout: item.limit == 1 ? maxTimeout : timeout,
                                         maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
-                                        delay: initialDelay
+                                        delay: initialDelay,
+                                        logger: logger
                                     ).query
                                 )
 
@@ -277,10 +278,11 @@ public struct Pattern: Codable, Sendable {
                                 query,
                                 timeout: item.limit == 1 ? maxTimeout : timeout,
                                 maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
-                                delay: initialDelay
+                                delay: initialDelay,
+                                logger: logger
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                            logger.trace(
+                            logger.info(
                                 "Processed \(index)th query batch using query generator (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
                                 "count = \(sample.count)) for " +
                                 ((kind ?? .positive) == .negative ? "negative " : "") +
@@ -326,7 +328,8 @@ public struct Pattern: Codable, Sendable {
                                 query,
                                 timeout: item.limit == 1 ? maxTimeout : timeout,
                                 maxNWastedAttempts: item.limit == 1 ? maxNWastedAttempts : 0,
-                                delay: initialDelay
+                                delay: initialDelay,
+                                logger: logger
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
                             logger.trace(
@@ -364,7 +367,8 @@ public struct Pattern: Codable, Sendable {
                 getQuery(query),
                 timeout: maxTimeout, // timeout,
                 maxNWastedAttempts: 1, // maxNWastedAttempts,
-                delay: initialDelay
+                delay: initialDelay,
+                logger: logger
             )
         } handleExecutionTimeMeasurement: { sample, executionTime in 
             logger.trace(
