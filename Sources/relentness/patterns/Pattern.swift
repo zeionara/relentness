@@ -312,8 +312,11 @@ public struct Pattern: Codable, Sendable {
 
                     return [(item: (limit: item.limit / 2, offset: item.offset), index: index + [0]), (item: (limit: item.limit / 2, offset: item.offset + item.limit / 2), index: index + [1])]
                 }
+                
+                // try join(Array(repeating: samples, count: 10).reduce([], +), logger: logger)
+                // try join(Array(repeating: samples, count: 100).reduce([], +), logger: logger)
 
-                return try join(samples)
+                return try join(samples, logger: logger)
             } else if query.containsPatternPlaceHolders {
                 var batchIterator = BatchIterator(limit: batchSizeUnwrapped)
                 let terminationManager = TerminationManager()
