@@ -239,7 +239,7 @@ public struct Pattern: Codable, Sendable {
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
         logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
-        logger.trace("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
+        // print("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
 
         if let batchSizeUnwrapped = batchSize {
             // print("baz")
@@ -254,6 +254,7 @@ public struct Pattern: Codable, Sendable {
                 // print("bar")
 
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
+                    logger.trace("Processing query for pattern \(pattern)")
                     do {
                         return try await measureExecutionTime { () -> Sample<BindingType> in
                             let query: CountingQueryWithAggregation<BindingType> = getQuery(
@@ -282,7 +283,7 @@ public struct Pattern: Codable, Sendable {
                                 logger: logger
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                            logger.info(
+                            logger.trace(
                                 "Processed \(index)th query batch using query generator (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
                                 "count = \(sample.count)) for " +
                                 ((kind ?? .positive) == .negative ? "negative " : "") +
@@ -291,7 +292,7 @@ public struct Pattern: Codable, Sendable {
                             return sample
                         }
                     } catch {
-                        logger.error("Failed \(index)th query: \(error)")
+                        logger.trace("Failed \(index)th query: \(error)")
 
                         switch error {
                             case QueryGenerationError.stopIteration:
@@ -319,6 +320,7 @@ public struct Pattern: Codable, Sendable {
                 let terminationManager = TerminationManager()
 
                 let samples = try await batchIterator.asyncDo(nWorkers: nWorkers) { (item, workerIndex, index) -> Sample<BindingType> in
+                    logger.trace("Processing query for pattern: \(pattern)")
                     do {
                         return try await measureExecutionTime { () -> Sample<BindingType> in
                             let query: CountingQueryWithAggregation<BindingType> = getQuery(query, limit: item.limit, offset: item.offset)
@@ -341,14 +343,20 @@ public struct Pattern: Codable, Sendable {
                             return sample
                         }
                     } catch {
-                        logger.error("Failed \(index)th query: \(error)")
+                        logger.trace("Failed \(index)th query: \(error)")
                         throw TaskExecitionError.taskHasFailed(item: item, index: index, workerIndex: workerIndex, reason: error, retry: true)
                     }
                 } until: { sample, index in
                     await terminationManager.shouldStop(receivedStopIndicator: sample.nBindings == 0, index: index)
                     // sample.nBindings == 0
                 } truncateElement: { item, index in
-                    [(item: item, index: index)]
+                    if item.limit % 2 != 0 {
+                        throw WorkloadDistributionError.cannotDistributeWorkloadEvenly(item: item, index: index)
+                    }
+
+                    return [(item: (limit: item.limit / 2, offset: item.offset), index: index + [0]), (item: (limit: item.limit / 2, offset: item.offset + item.limit / 2), index: index + [1])]
+
+                    // [(item: item, index: index)]
                 }
 
                 return try join(samples)
