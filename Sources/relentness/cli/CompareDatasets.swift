@@ -26,7 +26,7 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .transe, platform: .grapex),
     // DatasetImpl(name: .demo, path: "Demo/0000"),
     DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
-    DatasetImpl(name: .fb_15k, path: "fb-15k"),
+    // DatasetImpl(name: .fb_15k, path: "fb-15k"),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
@@ -148,7 +148,8 @@ public struct CompareDatasets: ParsableCommand {
             let adapter = BlazegraphAdapter(address: blazegraphHost_)
             let patterns = Patterns(patternsPath_)
 
-            let tracker = DatasetComparisonProgressTracker(nDatasets: DATASETS_FOR_COMPARISON.count, nPatterns: patterns.storage.elements.count)
+            let tracker = DatasetComparisonProgressTracker(nDatasets: DATASETS_FOR_COMPARISON.count, nPatterns: patterns.storage.elements.count, nPatternWorkers: nPatternProcessingWorkers_ ?? 1, nQueryWorkers: nQueryProcessingWorkers_ ?? 1)
+            // await tracker.setMessage(patternWorkerIndex: 0, queryWorkerIndex: 0, value: "Fictitious message")
             let telegramBot = enableNotifications_ ? try! TelegramAdapter(
                 tracker: tracker,
                 secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"],
@@ -233,7 +234,7 @@ public struct CompareDatasets: ParsableCommand {
             for dataset in DATASETS_FOR_COMPARISON {
 
                 Task {
-                    telegramBot?.broadcast("Evaluating dataset \(dataset) on \(patterns.storage.elements.count) patterns...")
+                    telegramBot?.broadcast("Evaluating dataset \(dataset.name.rawValue) on \(patterns.storage.elements.count.describe(plural: "patterns", singular: "pattern"))...")
                 }
 
                 nPatterns = 0
@@ -309,7 +310,7 @@ public struct CompareDatasets: ParsableCommand {
                 // }
 
                 // for pattern in patterns.storage.elements {
-                _ = try! await patterns.storage.elements.asyncMap(nWorkers: nPatternProcessingWorkers_) { pattern, _ -> PatternProcessingResult in
+                _ = try! await patterns.storage.elements.asyncMap(nWorkers: nPatternProcessingWorkers_) { pattern, workerIndex -> PatternProcessingResult in
                     defer {
                         Task {
                             await tracker.nextPattern()
@@ -318,7 +319,8 @@ public struct CompareDatasets: ParsableCommand {
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "symmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "symmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"symmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "symmetric")
@@ -326,7 +328,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
                             let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "antisymmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "antisymmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"antisymmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "antisymmetric")
@@ -334,7 +337,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
                             let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "equivalence", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "equivalence", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"equivalence") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "equivalence")
@@ -342,7 +346,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("equivalence\t\(stats)")
                         case "implication":
                             let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "implication", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "implication", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"implication") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "implication")
@@ -350,7 +355,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("implication\t\(stats)")
                         case "reflexive":
                             let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "reflexive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "reflexive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"reflexive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "reflexive")
@@ -358,7 +364,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("reflexive\t\(stats)")
                         case "transitive":
                             let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "transitive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "transitive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"transitive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "transitive")
@@ -366,7 +373,8 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("transitive\t\(stats)")
                         case "composition":
                             let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "composition", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "composition", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name,
+                                workerIndex: workerIndex, tracker: tracker
                             ) 
                             return PatternProcessingResult(stats, pattern:"composition") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "composition")
