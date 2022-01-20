@@ -362,7 +362,7 @@ public struct Pattern: Codable, Sendable {
                     // [(item: item, index: index)]
                 }
 
-                return try join(samples)
+                return try join(samples, logger: logger)
             }
         }
 
