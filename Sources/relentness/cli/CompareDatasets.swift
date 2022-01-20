@@ -4,7 +4,12 @@ import Logging
 import wickedData
 
 public enum Dataset: String {
-    case demo, wordnet_11, wordnet_18, wordnet_18_rr, fb_13, fb_15k
+    case demo = "demo"
+    case wordnet_11 = "wordnet-11"
+    case wordnet_18 = "wordnet-18"
+    case wordnet_18_rr = "wordnet-18-rr"
+    case fb_13 = "fb-13"
+    case fb_15k = "fb-15k"
 }
 
 public struct DatasetImpl: CustomStringConvertible {
@@ -312,7 +317,7 @@ public struct CompareDatasets: ParsableCommand {
                     switch pattern.name {
                         case "symmetric":
                             let stats: PatternStats<CountableBindingTypeWithOneRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "symmetric", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "symmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"symmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "symmetric")
@@ -320,7 +325,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("symmetric\t\(stats)")
                         case "antisymmetric":
                             let stats: PatternStats<CountableBindingTypeWithAntisymmetricRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "antisymmetric", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "antisymmetric", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"antisymmetric") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "antisymmetric")
@@ -328,7 +333,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("antisymmetric\t\(stats)")
                         case "equivalence":
                             let stats: PatternStats<CountableBindingTypeWithEquivalentRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "equivalence", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "equivalence", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"equivalence") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "equivalence")
@@ -336,7 +341,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("equivalence\t\(stats)")
                         case "implication":
                             let stats: PatternStats<CountableBindingTypeWithImplicationRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "implication", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "implication", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"implication") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "implication")
@@ -344,7 +349,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("implication\t\(stats)")
                         case "reflexive":
                             let stats: PatternStats<CountableBindingTypeWithReflexiveRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "reflexive", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "reflexive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"reflexive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "reflexive")
@@ -352,7 +357,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("reflexive\t\(stats)")
                         case "transitive":
                             let stats: PatternStats<CountableBindingTypeWithTransitiveRelationAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "transitive", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "transitive", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"transitive") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "transitive")
@@ -360,7 +365,7 @@ public struct CompareDatasets: ParsableCommand {
                             // logger.info("transitive\t\(stats)")
                         case "composition":
                             let stats: PatternStats<CountableBindingTypeWithCompositionRelationsAggregation> = try! await pattern.evaluate(
-                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "composition", nWorkers: nQueryProcessingWorkers_
+                                adapter, timeout: samplingTimeout_, logger: patternsEvaluationLogger, pattern: "composition", nWorkers: nQueryProcessingWorkers_, dataset: dataset.name
                             ) 
                             return PatternProcessingResult(stats, pattern:"composition") // , logger: logger)
                             // try! appendStatCells(stats, pattern: "composition")

@@ -36,6 +36,10 @@ enum WorkloadDistributionError: Error {
     case cannotDistributeWorkloadEvenly(item: BatchIterator.Element, index: [Int])
 }
 
+enum BatchSizeError: Error {
+    case cannotFindAppropriateBatchSize(dataset: Dataset, pattern: String?)
+}
+
 // enum QueryGenerationError: Error {
 //     case cannotGenerateQuery(comment: String)
 // }
@@ -171,7 +175,7 @@ public struct Pattern: Codable, Sendable {
 
     public let positiveBatched: String? // TODO: Delete this
 
-    public let batchSize: Int?
+    public let batchSize: [String: Int]?
     public let enabled: Bool?
 
     public let totalQuery = CountingQuery(
@@ -237,7 +241,7 @@ public struct Pattern: Codable, Sendable {
 
     public func getSample<BindingType: CountableBindingTypeWithAggregation>(
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
-        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil
+        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil, batchSize: Int? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         // print("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
 
@@ -362,7 +366,7 @@ public struct Pattern: Codable, Sendable {
                     // [(item: item, index: index)]
                 }
 
-                return try join(samples)
+                return try join(samples, logger: logger)
             }
         }
 
@@ -398,23 +402,45 @@ public struct Pattern: Codable, Sendable {
         )
     }
 
+    public func getBatchSize(dataset: Dataset?, pattern: String?, logger: Logger? = nil) throws -> Int? {
+        if let unwrappedDataset = dataset {
+            if let sizes = batchSize {
+                if let size = sizes[unwrappedDataset.rawValue] {
+                    return size
+                }
+                logger.trace("No batch size for dataset \(unwrappedDataset.rawValue)") 
+                if let defaultSize = sizes["default"] {
+                    return defaultSize
+                }
+                throw BatchSizeError.cannotFindAppropriateBatchSize(dataset: unwrappedDataset, pattern: pattern)
+            }
+            return nil
+        }
+        if let sizes = batchSize {
+            if let defaultSize = sizes["default"] {
+                return defaultSize
+            }
+        }
+        return nil
+    }
+
     public func evaluate<BindingType: CountableBindingTypeWithAggregation>(
-        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil, nWorkers: Int? = nil
+        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil, nWorkers: Int? = nil, dataset: Dataset? = nil
     ) async throws -> PatternStats<BindingType> {
-        
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
         // let totalSample = try await pattern.getTotalSample(adapter)
         // print("Negative query generaor = \(String(describing: negativeQueryGenerator?.getText(name: name)))")
+        let batchSize = try getBatchSize(dataset: dataset, pattern: pattern, logger: logger)
         return try await measureExecutionTime {
             (
                 positive: try await getSample(
                     adapter, query: positiveQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
-                    kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator?.getText(name: name)
+                    kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator?.getText(name: name), batchSize: batchSize
                 ),
                 negative: try await getSample(
                     adapter, query: negativeQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
-                    kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator?.getText(name: name)
+                    kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator?.getText(name: name), batchSize: batchSize
                 ),
                 total: try await getTotalSample(adapter, timeout: timeout) // TODO: Extend signature according to the positive and negative pattern evaluators
             )
