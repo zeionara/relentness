@@ -26,6 +26,7 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .transe, platform: .grapex),
     // DatasetImpl(name: .demo, path: "Demo/0000"),
     DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
+    DatasetImpl(name: .fb_15k, path: "fb-15k"),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 
