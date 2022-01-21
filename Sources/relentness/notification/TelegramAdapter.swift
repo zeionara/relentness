@@ -66,13 +66,17 @@ public actor DatasetComparisonProgressTracker: ProgressTracker {
     
     var nProcessedDatasets: Int
     var nProcessedPatterns: Int
+
+    var messages: [[String]] // One status per pattern & query handler
    
-    public init(nDatasets: Int, nPatterns: Int) {
+    public init(nDatasets: Int, nPatterns: Int, nPatternWorkers: Int, nQueryWorkers: Int) {
         self.nDatasets = nDatasets
         self.nPatterns = nPatterns
 
         self.nProcessedDatasets = 0
         self.nProcessedPatterns = 0
+
+        messages = Array(repeating: Array(repeating: "-", count: nQueryWorkers), count: nPatternWorkers)
     } 
     
     public func nextPattern() {
@@ -112,10 +116,25 @@ public actor DatasetComparisonProgressTracker: ProgressTracker {
     //     self.nProcessedPatterns = 0
     // }
 
+    public func setMessage(patternWorkerIndex: Int, queryWorkerIndex: Int, value: String) {
+        messages[patternWorkerIndex][queryWorkerIndex] = value
+    }
+
     public var status: String {
         get async {
-            "\(self.getNprocessedDatasets()) / \(self.nDatasets) datasets and " +
-            "\(self.getNprocessedPatterns()) / \(self.getNpatterns()) patterns for the current dataset are handled"
+            let joinedMessages = try! await (
+                messages.map{ messages in
+                    messages.filter{ message in
+                        message != "-"
+                    }.joined(separator: "\n")
+                }.filter{ message in
+                    message != ""
+                }.joined(separator: "\n\n")
+            )
+
+            return "\(self.getNprocessedDatasets()) / \(self.nDatasets) datasets and " +
+            "\(self.getNprocessedPatterns()) / \(self.getNpatterns()) patterns for the current dataset are handled" +
+            (joinedMessages == "" ? "" : "\n\n\(joinedMessages)")
         }
     }
 }

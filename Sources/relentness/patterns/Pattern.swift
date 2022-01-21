@@ -13,7 +13,7 @@ public extension String {
     }
 }
 
-public enum PatternKind {
+public enum PatternKind: String {
     case positive, negative
 }
 
@@ -241,9 +241,16 @@ public struct Pattern: Codable, Sendable {
 
     public func getSample<BindingType: CountableBindingTypeWithAggregation>(
         _ adapter: BlazegraphAdapter, query: String, timeout: Int? = nil,
-        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil, batchSize: Int? = nil
+        logger: Logger? = nil, pattern: String? = nil, kind: PatternKind? = nil, nWorkers: Int? = nil, queryGenerator: String? = nil, batchSize: Int? = nil,
+        patternWorkerIndex: Int = 0, tracker: DatasetComparisonProgressTracker? = nil
     ) async throws -> Sample<BindingType> { // TODO: Change blazegraph adapter to an abstract type
         // print("Getting sample for pattern \(pattern) with batch size \(batchSize)...")
+        
+        for i in 0..<(nWorkers ?? 1) {
+            Task {
+                await tracker?.setMessage(patternWorkerIndex: patternWorkerIndex, queryWorkerIndex: i, value: "Handling \(kind?.rawValue ?? "-") queries for pattern \(pattern ?? "-")")
+            }
+        }
 
         if let batchSizeUnwrapped = batchSize {
             // print("baz")
@@ -287,12 +294,15 @@ public struct Pattern: Codable, Sendable {
                                 logger: logger
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                            logger.trace(
-                                "Processed \(index)th query batch using query generator (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
+                            let message = "Processed \(index)th query batch using query generator (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + // ") for " +
                                 "count = \(sample.count)) for " +
                                 ((kind ?? .positive) == .negative ? "negative " : "") +
                                 "pattern \(pattern ?? "")"
-                            )
+
+                            logger.trace(message)
+                            Task {
+                                await tracker?.setMessage(patternWorkerIndex: patternWorkerIndex, queryWorkerIndex: workerIndex, value: message)
+                            }
                             return sample
                         }
                     } catch {
@@ -341,12 +351,15 @@ public struct Pattern: Codable, Sendable {
                                 logger: logger
                             )
                         } handleExecutionTimeMeasurement: { (sample, executionTime) -> Sample<BindingType> in 
-                            logger.trace(
-                                "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
+                            let message = "Processed \(index)th query batch (limit = \(item.limit), offset = \(item.offset), n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds, " + 
                                 "count = \(sample.count)) for " +
                                 ((kind ?? .positive) == .negative ? "negative " : "") +
                                 "pattern \(pattern ?? "")"
-                            )
+
+                            logger.trace(message)
+                            Task {
+                                await tracker?.setMessage(patternWorkerIndex: patternWorkerIndex, queryWorkerIndex: workerIndex, value: message)
+                            }
                             return sample
                         }
                     } catch {
@@ -386,11 +399,16 @@ public struct Pattern: Codable, Sendable {
                 logger: logger
             )
         } handleExecutionTimeMeasurement: { sample, executionTime in 
-            logger.trace(
-                "Processed query (n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
+            let message = "Processed query (n-bindings = \(sample.nBindings), evaluation-time = \(executionTime) seconds) for " +
                 ((kind ?? .positive) == .negative ? "negative " : "") +
                 "pattern \(pattern ?? "")"
-            )
+
+            logger.trace(message)
+            for i in 0..<(nWorkers ?? 1) {
+                Task {
+                    await tracker?.setMessage(patternWorkerIndex: patternWorkerIndex, queryWorkerIndex: i, value: message)
+                }
+            }
             return sample
         }
     }
@@ -425,7 +443,8 @@ public struct Pattern: Codable, Sendable {
     }
 
     public func evaluate<BindingType: CountableBindingTypeWithAggregation>(
-        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil, nWorkers: Int? = nil, dataset: Dataset? = nil
+        _ adapter: BlazegraphAdapter, timeout: Int? = nil, logger: Logger? = nil, pattern: String? = nil, nWorkers: Int? = nil, dataset: Dataset? = nil, workerIndex: Int = 0,
+        tracker: DatasetComparisonProgressTracker? = nil
     ) async throws -> PatternStats<BindingType> {
         // let positiveSample: Sample<BindingType> = try await pattern.getPositiveSample(adapter)
         // let negativeSample: Sample<BindingType> = try await pattern.getNegativeSample(adapter)
@@ -436,11 +455,13 @@ public struct Pattern: Codable, Sendable {
             (
                 positive: try await getSample(
                     adapter, query: positiveQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
-                    kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator?.getText(name: name), batchSize: batchSize
+                    kind: .positive, nWorkers: nWorkers, queryGenerator: positiveQueryGenerator?.getText(name: name), batchSize: batchSize,
+                    patternWorkerIndex: workerIndex, tracker: tracker
                 ),
                 negative: try await getSample(
                     adapter, query: negativeQueryText.getText(name: name), timeout: timeout, logger: logger, pattern: pattern,
-                    kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator?.getText(name: name), batchSize: batchSize
+                    kind: .negative, nWorkers: nWorkers, queryGenerator: negativeQueryGenerator?.getText(name: name), batchSize: batchSize,
+                    patternWorkerIndex: workerIndex, tracker: tracker
                 ),
                 total: try await getTotalSample(adapter, timeout: timeout) // TODO: Extend signature according to the positive and negative pattern evaluators
             )
