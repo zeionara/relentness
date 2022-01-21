@@ -1,6 +1,6 @@
 items:
   - name: symmetric
-    enabled: false
+    # enabled: false
     positive:
     positive: |-
       select (count(?h) as ?count) (?r as ?relation) where {
@@ -18,7 +18,7 @@ items:
       group by ?r
       order by desc(?count)
   - name: antisymmetric
-    enabled: false
+    # enabled: false
     positive: |-
       select (count(?h) as ?count) ?forward ?backward where {                                                                                                                                             
         ?h ?forward ?t.                                                                                                                                                                                        
@@ -39,7 +39,7 @@ items:
       group by ?forward ?backward
       order by desc(?count)
   - name: equivalence
-    enabled: false
+    # enabled: false
     positive: |-
       select (count(?h) as ?count) ?primary ?secondary where {
         ?h ?primary ?t.
@@ -59,7 +59,7 @@ items:
       group by ?primary ?secondary
       order by desc(?count)
   - name: implication
-    enabled: false
+    # enabled: false
     # positive: |-
     #   select (sum(?partial_count) as ?count) ?original ?derivative {
     #     {
@@ -264,7 +264,13 @@ items:
       # }
       # group by ?original ?derivative
       # order by desc(?count)
-    batch-size: 16
+    batch-size:
+      wordnet-11: 128
+      wordnet-18: 128
+      wordnet-18-rr: 128
+      fb-13: 128
+      fb-15k: 16
+      default: 64
 #      select (sum(?first_count) as ?count) ?original ?derivative {
 #        {
 #          select (count(?h) as ?first_count) ?original ?derivative {
@@ -342,7 +348,7 @@ items:
 #      group by ?original ?derivative
 #      order by desc(?count)
   - name: reflexive
-    enabled: false
+    # enabled: false
     positive: |-
       select (count(?h) as ?count) ?loopback {
         ?h ?loopback ?h
@@ -362,7 +368,7 @@ items:
       group by ?loopback
       order by desc(?count)
   - name: transitive
-    enabled: false
+    # enabled: false
     positive: |-
       select (count(?h) as ?count) ?translator {
         ?h ?translator ?t, ?n.
@@ -379,6 +385,7 @@ items:
       group by ?translator
       order by desc(?count)
   - name: composition
+    # enabled: false
     positive: |-
       select (count(?h) as ?count) ?premise ?statement ?conclusion {
         ?h ?premise ?t;
@@ -425,7 +432,13 @@ items:
       group by ?premise ?statement ?conclusion
       order by desc(?count)
     negative-generator: from NegativeAutoGeneratorImproved2.rq
-    batch-size: 64
+    batch-size:
+      wordnet-11: 64
+      wordnet-18: 64
+      wordnet-18-rr: 64
+      fb-13: 64
+      fb-15k: 65536
+      default: 512
     # enabled: false
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
   #       {
