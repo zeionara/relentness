@@ -10,6 +10,7 @@ public enum Dataset: String {
     case wordnet_18_rr = "wordnet-18-rr"
     case fb_13 = "fb-13"
     case fb_15k = "fb-15k"
+    case fb_15k237 = "fb-15k237"
 }
 
 public struct DatasetImpl: CustomStringConvertible {
@@ -25,11 +26,12 @@ let DATASETS_FOR_COMPARISON: [DatasetImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
     // ModelImpl(architecture: .transe, platform: .grapex),
     // DatasetImpl(name: .demo, path: "Demo/0000"),
-    // DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
+    DatasetImpl(name: .wordnet_11, path: "wordnet-11"),
     DatasetImpl(name: .wordnet_18, path: "wordnet-18"),
     DatasetImpl(name: .wordnet_18_rr, path: "wordnet-18-rr"),
     DatasetImpl(name: .fb_13, path: "fb-13"),
-    // DatasetImpl(name: .fb_15k, path: "fb-15k"),
+    DatasetImpl(name: .fb_15k, path: "fb-15k"),
+    DatasetImpl(name: .fb_15k237, path: "fb-15k237"),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
 

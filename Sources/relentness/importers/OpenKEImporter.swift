@@ -101,6 +101,8 @@ public class TriplesBatch {
         let decodedRows = (contentsWithoutHeader.last! == "" ? contentsWithoutHeader.dropLast() : contentsWithoutHeader).map{ row -> IndexedTriple in
             let tripleComponents = row.tabSeparatedValues
 
+            // print(tripleComponents)
+
             return (head: tripleComponents.first!.asInt, relation: tripleComponents.last!.asInt, tail: tripleComponents[1].asInt) 
         }
 

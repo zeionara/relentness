@@ -270,6 +270,7 @@ items:
       wordnet-18-rr: 128
       fb-13: 128
       fb-15k: 16
+      fb-15k237: 128
       default: 64
 #      select (sum(?first_count) as ?count) ?original ?derivative {
 #        {
@@ -438,6 +439,7 @@ items:
       wordnet-18-rr: 64
       fb-13: 64
       fb-15k: 65536
+      fb-15k237: 1024
       default: 512
     # enabled: false
   #     select (count(?h) as ?count) ?premise ?statement ?conclusion {
