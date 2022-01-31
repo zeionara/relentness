@@ -7,9 +7,9 @@ public extension HyperParamSet {
             args.append(nEpochs.asStringifiedHyperparameter)
         }
 
-        if let _ = nBatches {
+        if let _ = batchSize {
             args.append("-b")
-            args.append(nBatches.asStringifiedHyperparameter)
+            args.append(batchSize.asStringifiedHyperparameter)
         }
 
         if let _ = alpha {
@@ -28,12 +28,12 @@ public extension HyperParamSet {
         }
 
         if let _ = entityNegativeRate {
-            args.append("--entity-negative-rate")
+            args.append("--entity-neg-rate")
             args.append(entityNegativeRate.asStringifiedHyperparameter)
         }
 
         if let _ = relationNegativeRate {
-            args.append("--relation-negative-rate")
+            args.append("--relation-neg-rate")
             args.append(entityNegativeRate.asStringifiedHyperparameter)
         }
 

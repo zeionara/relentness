@@ -90,7 +90,7 @@ public enum EvaluationTask: String, CaseIterable, Sendable, Codable {
 
 public struct HyperParamSet: CustomStringConvertible, Sendable {
     public let nEpochs: Int?
-    public let nBatches: Int?
+    public let batchSize: Int?
     public let alpha: Double?
     public let margin: Double?
     public let hiddenSize: Int?
@@ -109,7 +109,7 @@ public struct HyperParamSet: CustomStringConvertible, Sendable {
     public let importPath: String?
 
     private static let headerItemLabels = [
-        "n-epochs", "n-batches", "alpha", "margin", "dimension", "entity-neg-rate", "relation-neg-rate",
+        "n-epochs", "batch-size", "alpha", "margin", "dimension", "entity-neg-rate", "relation-neg-rate",
         "lambda", "optimizer", "task", "bern", "relation-dim", "entity-dim", "patience", "min-delta", "n-workers", "import-path"
     ]
 
@@ -123,7 +123,7 @@ public struct HyperParamSet: CustomStringConvertible, Sendable {
 
     public var descriptionItems: [CellValue] {
         [
-            nEpochs.asUserEnteredValue, nBatches.asUserEnteredValue, alpha.asUserEnteredValue, margin.asUserEnteredValue,
+            nEpochs.asUserEnteredValue, batchSize.asUserEnteredValue, alpha.asUserEnteredValue, margin.asUserEnteredValue,
             hiddenSize.asUserEnteredValue, entityNegativeRate.asUserEnteredValue,
             relationNegativeRate.asUserEnteredValue, lambda.asUserEnteredValue, (optimizer?.rawValue).asUserEnteredValue, 
             (task?.rawValue).asUserEnteredValue, bern.asUserEnteredValue,
@@ -133,7 +133,7 @@ public struct HyperParamSet: CustomStringConvertible, Sendable {
     }
 
     public var description: String {
-        "\(nEpochs.asStringifiedHyperparameter)\t\(nBatches.asStringifiedHyperparameter)\t\(alpha.asStringifiedHyperparameter)\t\(margin.asStringifiedHyperparameter)\t" +
+        "\(nEpochs.asStringifiedHyperparameter)\t\(batchSize.asStringifiedHyperparameter)\t\(alpha.asStringifiedHyperparameter)\t\(margin.asStringifiedHyperparameter)\t" +
         "\(hiddenSize.asStringifiedHyperparameter)\t\(entityNegativeRate.asStringifiedHyperparameter)\t" +
         "\(relationNegativeRate.asStringifiedHyperparameter)\t\(lambda.asStringifiedHyperparameter)\t\((optimizer?.rawValue).asStringifiedHyperparameter)\t" + 
         "\((task?.rawValue).asStringifiedHyperparameter)\t\(bern.asStringifiedHyperparameter)\t" +
@@ -195,7 +195,7 @@ public struct HyperParamStorage: Codable {
                                                                             result.append(
                                                                                 HyperParamSet(
                                                                                     nEpochs: nEpochs_,
-                                                                                    nBatches: nBatches_,
+                                                                                    batchSize: nBatches_,
                                                                                     alpha: alpha_,
                                                                                     margin: margin_,
                                                                                     hiddenSize: hiddenSize_,

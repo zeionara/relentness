@@ -7,9 +7,9 @@ public extension HyperParamSet {
             args.append(nEpochs.asStringifiedHyperparameter)
         }
 
-        if let _ = nBatches {
+        if let _ = batchSize {
             args.append("-b")
-            args.append(nBatches.asStringifiedHyperparameter)
+            args.append(batchSize.asStringifiedHyperparameter)
         }
 
         if let _ = alpha {

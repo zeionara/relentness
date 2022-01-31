@@ -5,8 +5,8 @@ import wickedData
 import ahsheet
 
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
-    ModelImpl(architecture: .se, platform: .grapex),
-    // ModelImpl(architecture: .transe, platform: .grapex),
+    // ModelImpl(architecture: .se, platform: .grapex),
+    ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
     // ModelImpl(architecture: .complex, platform: .openke)
 ]
@@ -66,6 +66,9 @@ public struct CompareModels: ParsableCommand {
     @Flag(name: .long, help: "Print request body instead of exporing comparison results")
     var dryRun = false
 
+    @Flag(name: .long, help: "Should send notifications via telegram when progress is updated")
+    var enableNotifications = false
+
     public static var configuration = CommandConfiguration(
         commandName: "compare-models",
         abstract: "Compare knowledge graph embedding models by selecting optimal set of hyperparams and performing validation"
@@ -81,7 +84,7 @@ public struct CompareModels: ParsableCommand {
         logger.trace("Executing command \(CommandLine.arguments.joined(separator: " "))...")
 
         let exportToGoogleSheets_ = exportToGoogleSheets
-
+        let enableNotifications_ = enableNotifications
 
         let env_ = env
         let grapexRoot_ = grapexRoot
@@ -104,16 +107,16 @@ public struct CompareModels: ParsableCommand {
 
         BlockingTask {
             let tracker = ModelComparisonProgressTracker(nModels: MODELS_FOR_COMPARISON.count, nHyperParameterSets: 0)
-            let telegramBot = try! TelegramAdapter(
+            let telegramBot = enableNotifications_ ? try! TelegramAdapter(
                 tracker: tracker,
                 secret: ProcessInfo.processInfo.environment["EMBEDDABOT_SECRET"],
                 logger: Logger(level: verbose_ ? .trace : .info, label: "telegram-bot")
-            )
+            ) : nil
 
-            async let void: () = await telegramBot.run()
+            async let void = await telegramBot?.run()
 
             Task {
-                telegramBot.broadcast("The bot has started")
+                telegramBot?.broadcast("The bot has started")
             }
 
             let adapter = exportToGoogleSheets_ ? try? GoogleSheetsApiAdapter(telegramBot: telegramBot) : nil
@@ -177,7 +180,7 @@ public struct CompareModels: ParsableCommand {
                 let sets = try! HyperParamSets(corpus_, model.architecture.rawValue, path_)
                 var collectedModelTestingResults = [ModelTestingResult]()
 
-                telegramBot.broadcast("Testing model \(model) on \(sets.storage.sets.count) hyperparameter sets...")
+                telegramBot?.broadcast("Testing model \(model) on \(sets.storage.sets.count) hyperparameter sets...")
 
                 // if !startedTelegramBot {
                 //     print("Starting telegram bot...")
@@ -204,7 +207,7 @@ public struct CompareModels: ParsableCommand {
                     await tracker.setNhyperParameterSets(sets.storage.sets.count)
                 }
 
-                print("Add measurements for the conditional format ranges")
+                logger.trace("Add measurements for the conditional format ranges")
 
                 formatRanges?.addMeasurements(
                     height: sets.storage.sets.count,
@@ -214,7 +217,7 @@ public struct CompareModels: ParsableCommand {
                     )
                 )
 
-                print("Add measurements for the numerical format ranges")
+                logger.trace("Add measurements for the numerical format ranges")
 
                 numberFormatRanges?.addMeasurements(
                     height: sets.storage.sets.count,
@@ -224,7 +227,7 @@ public struct CompareModels: ParsableCommand {
                     )
                 )
 
-                print("Checking hyperparams...")
+                logger.trace("Checking hyperparams...")
 
                 for hparams in sets.storage.sets {
                     do {
@@ -325,7 +328,7 @@ public struct CompareModels: ParsableCommand {
                 }
             }
 
-            telegramBot.broadcast("Completed testing models")
+            telegramBot?.broadcast("Completed testing models")
 
             var collectedModelValidationResults = [ModelTestingResult]()
 
@@ -398,7 +401,13 @@ public struct CompareModels: ParsableCommand {
                         }
                     }
 
+                    // logger.info("Computing mean...")
+
+                    // print(metrics)
+
                     let meanMetrics = metrics.mean.mean.mean
+
+                    // logger.info("Computed mean")
 
                     collectedModelValidationResults.append((meanMetrics: meanMetrics, hparams: hparams[model.description]!, executionTime: executionTime))
                     
@@ -453,7 +462,7 @@ public struct CompareModels: ParsableCommand {
                 logger.trace(Logger.Message(stringLiteral: String(data: unwrappedResponse, encoding: .utf8)!))
             }
 
-            telegramBot.broadcast("Completed comparing models")
+            telegramBot?.broadcast("Completed comparing models")
         } // Blocking task
     } // run
 } // CompareModels

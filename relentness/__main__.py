@@ -46,7 +46,7 @@ class Foo(Model):
 @click.option('--remove', '-r', type=bool, is_flag=True)  #
 @click.option('--validate', '-val', type=bool, is_flag=True)  #
 @click.option('--n-epochs', '-e', type=int, default=100)  #
-@click.option('--n-batches', '-b', type=int, default=3)  #
+@click.option('--batch-size', '-b', type=int, default=3)  #
 @click.option('--margin', '-ma', type=float, default=5.0)  #
 @click.option('--alpha', '-a', type=float, default=0.1)  #
 @click.option('--hidden-size', '-hs', type=int, default=10)  #
@@ -66,7 +66,7 @@ class Foo(Model):
 @click.option('--export-path', '-ep', type=str, default=None)  #
 @click.option('--visualize', '-vis', type=bool, is_flag=True)
 def test(
-    path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, n_batches: int = 2, margin: float = 5.0,
+    path: str, model: str, output: str = None, images: str = None, verbose: bool = False, seed: int = None, n_epochs: int = 10, batch_size: int = 2, margin: float = 5.0,
     alpha: float = 0.1, hidden_size: int = 10, as_tsv: bool = False, remove: bool = False, validate: bool = False,  # neg_rate: int = 2,
     lmbda: float = 0.0, optimizer: str = "sgd", task: str = 'link-prediction', bern: bool = False, relation_dimension: int = None, entity_dimension: int = None, patience: int = None,
     min_delta: float = None, relation_neg_rate: int = 0, entity_neg_rate: int = 1, n_workers: int = 8, n_export_steps: int = 0, import_path: str = None, export_path: str = None,
@@ -97,7 +97,7 @@ def test(
     # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     config.set_in_path(path)
     config.set_train_times(n_epochs)
-    config.set_nbatches(n_batches)
+    config.set_batch_size(batch_size)
     config.set_alpha(alpha)
     config.set_margin(margin)
     config.set_dimension(hidden_size)
