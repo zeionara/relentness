@@ -154,7 +154,7 @@ public extension Optional where Wrapped: Collection {
 
 public struct HyperParamStorage: Codable {
     public let nEpochs: [Int]?
-    public let nBatches: [Int]?
+    public let batchSize: [Int]?
     public let alpha: [Double]?
     public let margin: [Double]?
     public let hiddenSize: [Int]?
@@ -176,7 +176,7 @@ public struct HyperParamStorage: Codable {
         var result = [HyperParamSet]()
 
         _ = nEpochs.values.map { nEpochs_ in
-            for nBatches_ in nBatches.values {
+            for batchSize_ in batchSize.values {
                 for alpha_ in alpha.values {
                     for margin_ in margin.values {
                         for hiddenSize_ in hiddenSize.values {
@@ -195,7 +195,7 @@ public struct HyperParamStorage: Codable {
                                                                             result.append(
                                                                                 HyperParamSet(
                                                                                     nEpochs: nEpochs_,
-                                                                                    batchSize: nBatches_,
+                                                                                    batchSize: batchSize_,
                                                                                     alpha: alpha_,
                                                                                     margin: margin_,
                                                                                     hiddenSize: hiddenSize_,

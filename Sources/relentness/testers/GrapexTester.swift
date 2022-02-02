@@ -41,6 +41,11 @@ public struct GrapexTester: Tester {
 
         var args = ["test", "\(corpus)/\(String(format: "%04i", cvSplitIndex))", "-m", model.rawValue, "-t"]
         if let unwrappedHparams = hparams {
+            // print("Unwrapped hparams")
+            // print(unwrappedHparams)
+
+            // print("Grapex args")
+            // print(unwrappedHparams.grapexArgs)
             args.append(contentsOf: unwrappedHparams.grapexArgs)
         }
 

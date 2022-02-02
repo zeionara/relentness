@@ -10,6 +10,9 @@ private struct MeagerMetricSeriesIndexMap {
     let hitsAtTen: Int
 
     init(_ serialized: String) {
+       // print("Serialized metrics:")
+       // print(serialized)
+
        let serializedAsTsv = serialized.tabSeparatedValues 
 
        meanRank = serializedAsTsv.firstIndex(of: "MR")! 

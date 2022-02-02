@@ -81,6 +81,8 @@ public struct OpenKeTester: Tester {
             envVars["CUDA_VISIBLE_DEVICES"] = String(describing: unwrappedWorkerIndex)
         }
 
+        // print("Running command '\(args.joined(separator: " "))'")
+
         return try await measureExecutionTime {
             try await runSubprocessAndGetOutput(
                 path: "/home/\(USER)/anaconda3/envs/\(env)/bin/python",
