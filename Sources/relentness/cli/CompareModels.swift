@@ -6,9 +6,9 @@ import ahsheet
 
 let MODELS_FOR_COMPARISON: [ModelImpl] = [
     // ModelImpl(architecture: .se, platform: .grapex),
-    ModelImpl(architecture: .transe, platform: .grapex),
+    // ModelImpl(architecture: .transe, platform: .grapex),
     ModelImpl(architecture: .transe, platform: .openke),
-    // ModelImpl(architecture: .complex, platform: .openke)
+    ModelImpl(architecture: .complex, platform: .openke)
 ]
 
 public typealias ModelTestingResult = (meanMetrics: MeagerMetricSeries, hparams: HyperParamSet, executionTime: Double) // TODO: Change MeagerMetricSeries to an abstract MetricSeries data type
@@ -242,7 +242,8 @@ public struct CompareModels: ParsableCommand {
                                     remove: remove_,
                                     gpu: gpu_,
                                     differentGpus: differentGpus_,
-                                    terminationDelay: terminationDelay_
+                                    terminationDelay: terminationDelay_,
+                                    logger: logger
                                 ).run(
                                     seeds: seeds_.count > 0 ? seeds_ : nil,
                                     delay: delay_,

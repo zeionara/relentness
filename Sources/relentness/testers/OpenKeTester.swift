@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 
 public protocol Tester: Sendable {
     associatedtype Metrics: MetricSet
@@ -30,7 +31,12 @@ public struct OpenKeTester: Tester {
 
     public let terminationDelay: Double?
 
-    public init(model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil, remove: Bool = false, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil) {
+    public let logger: Logger?
+
+    public init(
+        model: OpenKeModel, env: String, corpus: String, nWorkers: Int? = nil, remove: Bool = false, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil,
+        logger: Logger? = nil
+    ) {
         self.model = model
         self.env = env
         self.corpus = corpus
@@ -40,6 +46,7 @@ public struct OpenKeTester: Tester {
         self.gpu = gpu
         self.differentGpus = differentGpus
         self.terminationDelay = terminationDelay
+        self.logger = logger
     }
 
     public func runSingleTest(seed: Int? = nil) async throws -> Metrics {
