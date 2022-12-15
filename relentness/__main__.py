@@ -111,12 +111,17 @@ def test(
     config.set_entity_negative_rate(entity_neg_rate)
     config.set_relation_negative_rate(relation_neg_rate)
 
+    # model-specific
+
+    config.set_alpha(alpha)
     config.set_model(TransE if model == 'transe' else ComplEx)
+
+    config.set_margin(margin)
+    config.set_hidden_size(hidden_size)
 
     # # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     # config.set_in_path(path)
     # config.set_alpha(alpha)
-    # config.set_margin(margin)
     # config.set_dimension(hidden_size)
     # config.set_log_on(verbose)
 
