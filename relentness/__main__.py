@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from keras.models import Model
 
-from openke.config import Config
+from openke.config import Config, Pattern
 from openke.models import TransE, ComplEx
 
 
@@ -96,13 +96,25 @@ def test(
     config.set_corpus_path(path)
 
     config.set_drop_filter_duplicates(True)
-    config.set_drop_pattern_duplicates(True)
+    # config.set_drop_pattern_duplicates(True)
     config.set_enable_filter(False)
+
+    config.set_n_epochs(n_epochs)
+    config.set_batch_size(batch_size)
+
+    config.set_bern(bern)
+    config.set_cross_sampling(False)
+    config.set_n_observed_triples_per_pattern_instance(1)
+    config.set_n_workers(n_workers)
+    config.set_pattern(Pattern.NONE)
+
+    config.set_entity_negative_rate(entity_neg_rate)
+    config.set_relation_negative_rate(relation_neg_rate)
+
+    config.set_model(TransE if model == 'transe' else ComplEx)
 
     # # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     # config.set_in_path(path)
-    # config.set_train_times(n_epochs)
-    # config.set_batch_size(batch_size)
     # config.set_alpha(alpha)
     # config.set_margin(margin)
     # config.set_dimension(hidden_size)
@@ -110,8 +122,6 @@ def test(
 
     # config.set_lmbda(lmbda)
     # config.set_opt_method(optimizer)
-    # config.set_work_threads(n_workers)
-    # config.set_bern(1 if bern else 0)
     # if relation_dimension is not None:
     #     config.set_rel_dimension(relation_dimension)
     # if entity_dimension is not None:
@@ -140,7 +150,6 @@ def test(
     # config.init(as_tsv=as_tsv, verbose=verbose)
 
     # # environ['CUDA_VISIBLE_DEVICES']='7'
-    # config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
     # try:
     config.run(verbose = verbose)
