@@ -13,4 +13,3 @@ struct Relentness: ParsableCommand {
 }
 
 Relentness.main()
-

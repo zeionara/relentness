@@ -72,8 +72,9 @@ def test(
     min_delta: float = None, relation_neg_rate: int = 0, entity_neg_rate: int = 1, n_workers: int = 8, n_export_steps: int = 0, import_path: str = None, export_path: str = None,
     visualize: bool = False
 ):
-    if not as_tsv:
-        print(f'Got input path "{path}"')
+    # print("ok")
+    # if not as_tsv:
+    #     print(f'Got input path "{path}"')
 
     if seed is not None:
         os.environ['PYTHONHASHSEED'] = str(seed)
@@ -87,72 +88,74 @@ def test(
         os.environ['TF_DETERMINISTIC_OPS'] = '1'
         os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
 
-        # patch()
-
-    # mean = Foo().compute_mean(2.0, 5.0)
-    # print('foo')
+    # # mean = Foo().compute_mean(2.0, 5.0)
+    # # print('foo')
 
     config = Config()
 
-    # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
-    config.set_in_path(path)
-    config.set_train_times(n_epochs)
-    config.set_batch_size(batch_size)
-    config.set_alpha(alpha)
-    config.set_margin(margin)
-    config.set_dimension(hidden_size)
-    config.set_log_on(verbose)
+    config.set_corpus_path(path)
 
-    config.set_lmbda(lmbda)
-    config.set_opt_method(optimizer)
-    config.set_work_threads(n_workers)
-    config.set_bern(1 if bern else 0)
-    if relation_dimension is not None:
-        config.set_rel_dimension(relation_dimension)
-    if entity_dimension is not None:
-        config.set_ent_dimension(entity_dimension)
-    config.set_ent_neg_rate(entity_neg_rate)
-    config.set_rel_neg_rate(relation_neg_rate)
-    config.set_import_files(import_path)
-    config.set_export_files(export_path, steps=n_export_steps)
+    config.init_corpus(verbose = verbose)
 
-    assert patience is None and min_delta is None or patience is not None and min_delta is not None, "Patience and min-delta parameters must either both be provided either both omitted"
-    if patience is not None:
-        config.set_early_stopping((patience, min_delta))
+    # # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
+    # config.set_in_path(path)
+    # config.set_train_times(n_epochs)
+    # config.set_batch_size(batch_size)
+    # config.set_alpha(alpha)
+    # config.set_margin(margin)
+    # config.set_dimension(hidden_size)
+    # config.set_log_on(verbose)
 
-    output_path = input_to_output_path(path, model, seed) if output is None else output
-    images_path = input_to_images_path(path, model, seed) if images is None else images
-    # print(output_path)
-    makedirs(output_path, exist_ok=True)
-    config.set_export_files(f"{output_path}/model.vec.tf", 0)
-    config.set_out_files(f"{output_path}/embedding.vec.json")
+    # config.set_lmbda(lmbda)
+    # config.set_opt_method(optimizer)
+    # config.set_work_threads(n_workers)
+    # config.set_bern(1 if bern else 0)
+    # if relation_dimension is not None:
+    #     config.set_rel_dimension(relation_dimension)
+    # if entity_dimension is not None:
+    #     config.set_ent_dimension(entity_dimension)
+    # config.set_ent_neg_rate(entity_neg_rate)
+    # config.set_rel_neg_rate(relation_neg_rate)
+    # config.set_import_files(import_path)
+    # config.set_export_files(export_path, steps=n_export_steps)
 
-    if task == "link-prediction":
-        config.set_test_link_prediction(True)
-    else:
-        raise NotImplementedError("Triple classification task is not supported yet")
+    # assert patience is None and min_delta is None or patience is not None and min_delta is not None, "Patience and min-delta parameters must either both be provided either both omitted"
+    # if patience is not None:
+    #     config.set_early_stopping((patience, min_delta))
 
-    config.init(as_tsv=as_tsv, verbose=verbose)
+    # output_path = input_to_output_path(path, model, seed) if output is None else output
+    # images_path = input_to_images_path(path, model, seed) if images is None else images
+    # # print(output_path)
+    # makedirs(output_path, exist_ok=True)
+    # config.set_export_files(f"{output_path}/model.vec.tf", 0)
+    # config.set_out_files(f"{output_path}/embedding.vec.json")
 
-    # environ['CUDA_VISIBLE_DEVICES']='7'
-    config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
+    # if task == "link-prediction":
+    #     config.set_test_link_prediction(True)
+    # else:
+    #     raise NotImplementedError("Triple classification task is not supported yet")
 
-    try:
-        config.run()
+    # config.init(as_tsv=as_tsv, verbose=verbose)
 
-        # print(config.trainModel.entity_embeddings)
+    # # environ['CUDA_VISIBLE_DEVICES']='7'
+    # config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
-        if validate:
-            config.validate(verbose=verbose, as_tsv=as_tsv)
-        else:
-            config.test(verbose=verbose, as_tsv=as_tsv)
-    finally:
-        if remove:
-            rmtree(output_path)
+    # try:
+    #     config.run()
 
-    if visualize and getattr(config.trainModel, 'visualize_entity_embeddings') is not None:
-        config.trainModel.visualize_entity_embeddings(model='pca', path=images_path)
-        config.trainModel.visualize_relationship_embeddings(model='pca', path=images_path)
+    #     # print(config.trainModel.entity_embeddings)
+
+    #     if validate:
+    #         config.validate(verbose=verbose, as_tsv=as_tsv)
+    #     else:
+    #         config.test(verbose=verbose, as_tsv=as_tsv)
+    # finally:
+    #     if remove:
+    #         rmtree(output_path)
+
+    # if visualize and getattr(config.trainModel, 'visualize_entity_embeddings') is not None:
+    #     config.trainModel.visualize_entity_embeddings(model='pca', path=images_path)
+    #     config.trainModel.visualize_relationship_embeddings(model='pca', path=images_path)
 
 
 if __name__ == '__main__':
