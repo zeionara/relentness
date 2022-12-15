@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from keras.models import Model
 
-from openke.config import Config, Pattern
+from openke.config import Config, Pattern, Task, SubsetType
 from openke.models import TransE, ComplEx
 
 
@@ -91,7 +91,7 @@ def test(
     # # mean = Foo().compute_mean(2.0, 5.0)
     # # print('foo')
 
-    config = Config()
+    config = Config(Task.LINK_PREDICTION)
 
     config.set_corpus_path(path)
 
@@ -157,7 +157,8 @@ def test(
     # # environ['CUDA_VISIBLE_DEVICES']='7'
 
     # try:
-    config.run(verbose = verbose)
+    config.train(verbose = verbose)
+    config.test(SubsetType.TEST, verbose)
 
     # print(config.trainModel.entity_embeddings)
 
