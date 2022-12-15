@@ -95,7 +95,9 @@ def test(
 
     config.set_corpus_path(path)
 
-    config.init_corpus(verbose = verbose)
+    config.set_drop_filter_duplicates(True)
+    config.set_drop_pattern_duplicates(True)
+    config.set_enable_filter(False)
 
     # # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     # config.set_in_path(path)
@@ -141,9 +143,9 @@ def test(
     # config.set_model(TransE if model == 'transe' else ComplEx, seed=seed)
 
     # try:
-    #     config.run()
+    config.run(verbose = verbose)
 
-    #     # print(config.trainModel.entity_embeddings)
+    # print(config.trainModel.entity_embeddings)
 
     #     if validate:
     #         config.validate(verbose=verbose, as_tsv=as_tsv)
