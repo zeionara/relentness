@@ -9,8 +9,10 @@ import numpy as np
 import tensorflow as tf
 # from keras.models import Model
 
-from openke.config import Config, Pattern, Task, SubsetType, Optimizer, Model
+from openke.config import Config, ModelConfig, OptimizerConfig, TrainConfig
 # from openke.models import TransE, ComplEx
+from openke.meager import Adapter as MeagerAdapter, CorpusConfig, SamplerConfig, EvaluatorConfig
+from openke.enum import Pattern, Model, Optimizer, EvaluationTask, SubsetType
 
 
 @click.group()
@@ -91,34 +93,62 @@ def test(
     # # mean = Foo().compute_mean(2.0, 5.0)
     # # print('foo')
 
-    config = Config(Task.LINK_PREDICTION)
+    config = Config(
+        MeagerAdapter(
+            '/usr/lib/libmeager_python.so',
+            CorpusConfig(
+                path = path,
+                enable_filter = False,
+                drop_filter_duplicates = True
+            ),
+            SamplerConfig(
+                pattern = Pattern.NONE,
+                n_observed_triples_per_pattern_instance = 1,
+                bern = bern,
+                cross_sampling = False,
+                n_workers = n_workers
+            ),
+            EvaluatorConfig(
+                task = EvaluationTask.LINK_PREDICTION
+            )
+        ),
+        ModelConfig(
+            model = Model(model),
+            hidden_size = hidden_size
+        ),
+        OptimizerConfig(
+            optimizer = Optimizer(optimizer),
+            alpha = alpha
+        )
+    )
 
-    config.set_corpus_path(path)
+    # config = Config(Task.LINK_PREDICTION)
+    # config.set_corpus_path(path)
 
-    config.set_drop_filter_duplicates(True)
+    # config.set_drop_filter_duplicates(True)
     # config.set_drop_pattern_duplicates(True)
-    config.set_enable_filter(False)
+    # config.set_enable_filter(False)
 
-    config.set_n_epochs(n_epochs)
-    config.set_batch_size(batch_size)
+    # config.set_n_epochs(n_epochs)
+    # config.set_batch_size(batch_size)
 
-    config.set_bern(bern)
-    config.set_cross_sampling(False)
-    config.set_n_observed_triples_per_pattern_instance(1)
-    config.set_n_workers(n_workers)
-    config.set_pattern(Pattern.NONE)
+    # config.set_bern(bern)
+    # config.set_cross_sampling(False)
+    # config.set_n_observed_triples_per_pattern_instance(1)
+    # config.set_n_workers(n_workers)
+    # config.set_pattern(Pattern.NONE)
 
-    config.set_entity_negative_rate(entity_neg_rate)
-    config.set_relation_negative_rate(relation_neg_rate)
+    # config.set_entity_negative_rate(entity_neg_rate)
+    # config.set_relation_negative_rate(relation_neg_rate)
 
     # model-specific
 
-    config.set_alpha(alpha)
-    config.optimizer_type = Optimizer(optimizer)
-    config.set_model(Model(model))
+    # config.set_alpha(alpha)
+    # config.optimizer_type = Optimizer(optimizer)
+    # config.set_model(Model(model))
 
-    config.set_margin(margin)
-    config.set_hidden_size(hidden_size)
+    # config.set_margin(margin)
+    # config.set_hidden_size(hidden_size)
 
     # # config.set_in_path("/home/zeio/OpenKE/benchmarks/FB15K/")
     # config.set_in_path(path)
@@ -158,7 +188,15 @@ def test(
     # # environ['CUDA_VISIBLE_DEVICES']='7'
 
     # try:
-    config.train(verbose = verbose)
+    config.train(
+        TrainConfig(
+            n_epochs,
+            batch_size,
+            entity_neg_rate,
+            relation_neg_rate,
+            margin
+        ), seed, verbose
+    )
     config.test(SubsetType.TEST, verbose)
 
     # print(config.trainModel.entity_embeddings)
