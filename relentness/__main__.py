@@ -14,6 +14,9 @@ from openke.config import Config, ModelConfig, OptimizerConfig, TrainConfig, Che
 from openke.meager import Adapter as MeagerAdapter, CorpusConfig, SamplerConfig, EvaluatorConfig
 from openke.enum import Pattern, Model, Optimizer, EvaluationTask, SubsetType
 
+from openke.trainer import Trainer
+from openke.evaluator import Evaluator
+
 from .utils.files import input_to_output_model_path
 
 
@@ -185,7 +188,7 @@ def test(
     # # environ['CUDA_VISIBLE_DEVICES']='7'
 
     # try:
-    config.train(
+    df = Trainer(config).train(
         TrainConfig(
             n_epochs,
             batch_size,
@@ -197,7 +200,8 @@ def test(
         load = False,
         verbose = verbose
     )
-    config.test(SubsetType.TEST, verbose)
+    print(df)
+    Evaluator(config).test(SubsetType.TEST, verbose)
 
     # print(config.trainModel.entity_embeddings)
 
