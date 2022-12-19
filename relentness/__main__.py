@@ -1,33 +1,25 @@
 import os
 import random
-from os import makedirs
-from shutil import rmtree
-from uuid import uuid4
+# from os import makedirs
+# from shutil import rmtree
+# from uuid import uuid4
 
 import click
 import numpy as np
 import tensorflow as tf
 # from keras.models import Model
 
-from openke.config import Config, ModelConfig, OptimizerConfig, TrainConfig
+from openke.config import Config, ModelConfig, OptimizerConfig, TrainConfig, CheckpointConfig
 # from openke.models import TransE, ComplEx
 from openke.meager import Adapter as MeagerAdapter, CorpusConfig, SamplerConfig, EvaluatorConfig
 from openke.enum import Pattern, Model, Optimizer, EvaluationTask, SubsetType
+
+from .utils.files import input_to_output_model_path
 
 
 @click.group()
 def main():
     pass
-
-
-def input_to_output_path(input_path: str, model: str, seed: int = None):
-    input_path_components = input_path[::-1].split("/", maxsplit=4)
-    return f'{input_path_components[4][::-1]}/Models/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
-
-
-def input_to_images_path(input_path: str, model: str, seed: int = None):
-    input_path_components = input_path[::-1].split("/", maxsplit=4)
-    return f'{input_path_components[4][::-1]}/Images/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
 
 
 # class Foo(Model):
@@ -119,6 +111,11 @@ def test(
         OptimizerConfig(
             optimizer = Optimizer(optimizer),
             alpha = alpha
+        ),
+        early_stopping_config = None,
+        checkpoint_config = CheckpointConfig(
+            root = input_to_output_model_path(path, model, seed) if output is None else output,
+            frequency = 10
         )
     )
 
@@ -171,7 +168,7 @@ def test(
     # if patience is not None:
     #     config.set_early_stopping((patience, min_delta))
 
-    # output_path = input_to_output_path(path, model, seed) if output is None else output
+    # print(output_path)
     # images_path = input_to_images_path(path, model, seed) if images is None else images
     # # print(output_path)
     # makedirs(output_path, exist_ok=True)
@@ -195,7 +192,10 @@ def test(
             entity_neg_rate,
             relation_neg_rate,
             margin
-        ), seed, verbose
+        ),
+        seed = seed,
+        load = False,
+        verbose = verbose
     )
     config.test(SubsetType.TEST, verbose)
 
