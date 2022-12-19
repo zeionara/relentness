@@ -7,10 +7,10 @@ from uuid import uuid4
 import click
 import numpy as np
 import tensorflow as tf
-from keras.models import Model
+# from keras.models import Model
 
-from openke.config import Config, Pattern, Task, SubsetType
-from openke.models import TransE, ComplEx
+from openke.config import Config, Pattern, Task, SubsetType, Optimizer, Model
+# from openke.models import TransE, ComplEx
 
 
 @click.group()
@@ -28,10 +28,10 @@ def input_to_images_path(input_path: str, model: str, seed: int = None):
     return f'{input_path_components[4][::-1]}/Images/{input_path_components[2][::-1]}/{input_path_components[1][::-1]}/{model}/{uuid4() if seed is None else seed}'
 
 
-class Foo(Model):
-    @tf.function
-    def compute_mean(self, x, y):
-        return x + y / 2.0
+# class Foo(Model):
+#     @tf.function
+#     def compute_mean(self, x, y):
+#         return x + y / 2.0
 
 
 # @click.option('--neg-rate', '-n', type=int, default=2)
@@ -114,7 +114,8 @@ def test(
     # model-specific
 
     config.set_alpha(alpha)
-    config.set_model(TransE if model == 'transe' else ComplEx)
+    config.optimizer_type = Optimizer(optimizer)
+    config.set_model(Model(model))
 
     config.set_margin(margin)
     config.set_hidden_size(hidden_size)
