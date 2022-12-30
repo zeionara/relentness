@@ -1,6 +1,15 @@
 import Swat
 
+enum CodingError: Error {
+    case unknownValue
+}
+
 struct Evaluator: ConfigWithDefaultKeys {
+    enum Keys: CodingKey {
+        case task
+        case metrics
+    }
+
     enum Metric {
         case top(n: Int)
         case rank
@@ -14,27 +23,19 @@ struct Evaluator: ConfigWithDefaultKeys {
 
     let task: Task
     let metrics: [Metric]
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: AnyKey.self)
+
+        try container.encode(task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("task")))
+        try container.encode(metrics, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("metrics")))
+    }
 }
 
 extension Evaluator.Task: Codable {
 
-    // enum Key: CodingKey {
-    //     case rawValue
-    // }
-
-    enum CodingError: Error {
-        case unknownValue
-    }
-
     init(from decoder: Decoder) throws {
-        // print(try decoder.singleValueContainer().decode(String.self))
-        // print("foo")
-        // let container = try decoder.container(keyedBy: Key.self)
-        // print("bar")
-        // let rawValue = try container.decode(String.self, forKey: .rawValue)
-
         switch try decoder.singleValueContainer().decode(String.self) {
-        // switch rawValue {
             case "link-prediction":
                 self = .linkPrediction
             case "triple-classification":
@@ -44,39 +45,43 @@ extension Evaluator.Task: Codable {
         }
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        // var value = "\(self)".fromCamelCaseToSnakeCase()
+
+        // if let platform = encoder.userInfo[CodingUserInfoKey(rawValue: "platform")!] as? Platform {
+        //     if platform == .grapex {
+        //         value = value.atom
+        //     }
+        // }
+
+        try container.encode(
+            encoder.userInfo.postProcess(
+                "\(self)".fromCamelCaseToSnakeCase()
+            )
+        )
+        // try container.encode(value)
+        // var container = encoder.unkeyedContainer()
+        // try container.encode(contentsOf: ["\(self)".fromCamelCaseToSnakeCase().atom])
+    }
+
 }
 
 extension Evaluator.Metric: Codable {
 
     enum Key: String, CodingKey {
         case top
-        case tops
-        // case associatedValue
-        // case rawValue
-        // case top = "top-n"
-        // case rank
-        // case reciprocalRank
-        // case n
     }
 
     enum NestedKey: String, CodingKey {
-        // case rawValue
         case n
-        case ns
-        // case n
     }
 
-    enum CodingError: Error {
-        case unknownValue
+    enum EncodedTop: String, CodingKey {
+        case n
     }
 
     init(from decoder: Decoder) throws {
-        // print("foo")
-        // print(decoder.codingPath)
-        // let container = try decoder.unkeyedContainer()
-        // print(Key.top)
-        // print(decoder)
-
         if let metrics = try? decoder.container(keyedBy: Key.self), let top = try? metrics.nestedContainer(keyedBy: NestedKey.self, forKey: .top), let n = try? top.decode(Int.self, forKey: .n) {
             self = .top(n: n)
         } else if let metric = try? decoder.singleValueContainer().decode(String.self) {
@@ -91,25 +96,30 @@ extension Evaluator.Metric: Codable {
         } else {
             throw CodingError.unknownValue
         }
+    }
 
-        // let container = try decoder.container(keyedBy: Key.self)
-        // // print(container)
-        // // print(try container.decode(String.self, forKey: .top)) // *
-        // let n = try container.nestedContainer(keyedBy: NestedKey.self, forKey: .top)
-        // print(try n.decode(Int.self, forKey: .n)) // *
-        // // print(n)
-        // // print(decoder.json)
-        // // print(decoder)
-        // // let container = try decoder.container(keyedBy: Key.self)
-        // // print(try container.decode(String.self, forKey: .n))
-        // // print(container)
-        // print("bar")
-        // // let rawValue = try container.decode(String.self, forKey: .rawValue)
-
-        // switch try decoder.singleValueContainer().decode(String.self) {
-        //     default:
-        //         throw CodingError.unknownValue
-        // }
+    func encode(to encoder: Encoder) throws {
+        switch self {
+            case .rank, .reciprocalRank:
+                // var container = encoder.singleValueContainer()
+                // try container.encode("\(self)".fromCamelCaseToSnakeCase().atom)
+                var container = encoder.unkeyedContainer()
+                try container.encode(
+                    encoder.userInfo.postProcess(
+                        "\(self)".fromCamelCaseToSnakeCase()
+                    )
+                )
+            case let .top(n: n):
+                // var container = encoder.container(keyedBy: EncodedTop.self)
+                // try container.encode(n, forKey: .n)
+                var container = encoder.unkeyedContainer()
+                try container.encode(
+                    encoder.userInfo.postProcess(
+                        "top"
+                    )
+                )
+                try container.encode(n)
+        }
     }
 
 }

@@ -112,3 +112,15 @@ public extension Array {
     }
 }
 
+let PLATFORM_CODING_USER_INFO_KEY = CodingUserInfoKey(rawValue: "platform")!
+
+public extension Dictionary where Key == CodingUserInfoKey, Value == Any {
+    func postProcess(_ value: String) -> String {
+        if let platform = self[PLATFORM_CODING_USER_INFO_KEY] as? Platform {
+            if platform == .grapex {
+                return value.atom
+            }
+        }
+        return value
+    }
+}
