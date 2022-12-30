@@ -1,4 +1,5 @@
 import Swat
+// import Runtime
 
 enum CodingError: Error {
     case unknownValue
@@ -26,6 +27,12 @@ struct Evaluator: ConfigWithDefaultKeys {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: AnyKey.self)
+
+        // for property in try typeInfo(of: Self.self).properties {
+        //     print(property.name, try property.get(from: self))
+
+        //     try container.encode(property.get(from: self) as! Task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess(property.name)))
+        // }
 
         try container.encode(task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("task")))
         try container.encode(metrics, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("metrics")))

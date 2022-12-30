@@ -18,6 +18,7 @@ let package = Package(
         // .package(url: "https://github.com/zeionara/ahsheet.git", .branch("oauth"))
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
+        // .package(url: "https://github.com/wickwirew/Runtime.git", branch: "master")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -32,6 +33,7 @@ let package = Package(
                 .product(name: "ahsheet", package: "ahsheet"),
                 .product(name: "TelegramBotSDK", package: "telegram-bot-swift"),
                 "Swat"
+                // "Runtime"
             ]),
         .testTarget(
             name: "relentnessTests",
