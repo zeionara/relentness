@@ -38,6 +38,24 @@
         }
       },
       {
+        "package": "Runtime",
+        "repositoryURL": "https://github.com/wickwirew/Runtime.git",
+        "state": {
+          "branch": "master",
+          "revision": "dad03135d7701a4e7b3a4051e75d6b37bd8e178e",
+          "version": null
+        }
+      },
+      {
+        "package": "Swat",
+        "repositoryURL": "https://github.com/zeionara/Swat.git",
+        "state": {
+          "branch": "master",
+          "revision": "4eb8166e77fd38cb04153cefeeb355842e737413",
+          "version": null
+        }
+      },
+      {
         "package": "swift-argument-parser",
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
@@ -92,12 +110,21 @@
         }
       },
       {
+        "package": "Yaml",
+        "repositoryURL": "https://github.com/zeionara/YamlSwift.git",
+        "state": {
+          "branch": "master",
+          "revision": "c7e5a179ebf485e145719f4468c28e095b923859",
+          "version": null
+        }
+      },
+      {
         "package": "Yams",
         "repositoryURL": "https://github.com/jpsim/Yams.git",
         "state": {
           "branch": null,
-          "revision": "9ff1cc9327586db4e0c8f46f064b6a82ec1566fa",
-          "version": "4.0.6"
+          "revision": "01835dc202670b5bb90d07f3eae41867e9ed29f6",
+          "version": "5.0.1"
         }
       }
     ]
