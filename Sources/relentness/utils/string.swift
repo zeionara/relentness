@@ -144,3 +144,9 @@ public extension String {
         return append(extension: String.yaml_extension)
     }
 }
+
+public extension String {
+    func appendingPathComponent(_ component: String) -> String {
+        return URL(string: self)!.appendingPathComponent(component).path
+    }
+}

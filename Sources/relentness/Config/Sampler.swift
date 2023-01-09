@@ -20,8 +20,8 @@ struct Sampler_: ConfigWithDefaultKeys {
         try container.encode(encoder.userInfo.postProcessBool(crossSampling), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("crossSampling")))
         try container.encode(nWorkers, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("nWorkers")))
 
-        if let pattern = pattern {
-            try container.encode(pattern.rawValue, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("pattern")))
-        }
+        // if let pattern = pattern {
+        try container.encode(pattern?.rawValue, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("pattern")))
+        // }
     }
 }

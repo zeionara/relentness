@@ -1,6 +1,8 @@
 import Swat
 
 struct Corpus: ConfigWithDefaultKeys {
+    public static let cvSplitIndexFormat = "%04i"
+
     let path: String
     let enableFilter: Bool
     let dropPatternDuplicates: Bool
@@ -13,5 +15,14 @@ struct Corpus: ConfigWithDefaultKeys {
         try container.encode(encoder.userInfo.postProcessBool(enableFilter), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("enableFilter")))
         try container.encode(encoder.userInfo.postProcessBool(dropPatternDuplicates), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("dropPatternDuplicates")))
         try container.encode(encoder.userInfo.postProcessBool(dropFilterDuplicates), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("dropFilterDuplicates")))
+    }
+
+    func appending(cvSplitIndex: Int) -> Corpus {
+        return Corpus(
+            path: path.appendingPathComponent(String(format: Corpus.cvSplitIndexFormat, cvSplitIndex)),
+            enableFilter: enableFilter,
+            dropPatternDuplicates: dropPatternDuplicates,
+            dropFilterDuplicates: dropFilterDuplicates
+        )
     }
 }

@@ -40,12 +40,17 @@ public func runScriptAndGetOutput(_ fileName: String) throws -> String? {
     )
 }
 
-public func runSubprocessAndGetOutput(path: String, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
+public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
     while true { // Repeat process execution until success (testing process can be killed with kill -9 $(ps -aux | grep "python -m relentness" | grep -v "grep" | cut -d " " -f7)
         let task = Process()
 
-        task.executableURL = URL(fileURLWithPath: path)
-        task.environment = env
+        // task.executableURL = URL(fileURLWithPath: path)
+        task.executableURL = executable
+        task.currentDirectoryURL = path
+        // print(env)
+        // print(ProcessInfo.processInfo.environment)
+        // task.environment = env
+        task.environment = ProcessInfo.processInfo.environment.merging(env) { (_, new) in new }
         task.arguments = args
 
         let outputPipe = Pipe()
@@ -80,6 +85,7 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
         }
 
         task.standardOutput = outputPipe
+        // task.standardError = inputPipe
         task.standardError = inputPipe
 
 
@@ -95,8 +101,10 @@ public func runSubprocessAndGetOutput(path: String, args: [String], env: [String
 
             task.waitUntilExit()
 
+            print("output: ")
             if let unwrappedOutputData = outputData {
                 let output = String(decoding: unwrappedOutputData, as: UTF8.self)
+                print(output)
                 return dropNewLine ? String(output.dropLast()) : String(output)
             }
         } catch {

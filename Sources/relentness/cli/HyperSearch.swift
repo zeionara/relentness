@@ -4,6 +4,10 @@ import Logging
 import wickedData
 import Swat
 
+enum NotImplementedError: Error {
+    case platformIsNotSupported(name: String)
+}
+
 public class HyperSearch: ParsableCommand {
     // @Argument(help: "Name of folder which keeps the dataset for testing")
     // var corpus: String
@@ -90,6 +94,7 @@ public class HyperSearch: ParsableCommand {
 
         BlockingTask {
             // let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
+            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env)
 
             // for hparams in sets.storage.sets {
             for config in configs {
@@ -100,6 +105,29 @@ public class HyperSearch: ParsableCommand {
                     try config.write(to: configPath, as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: self.platform])
                     // print(try Yams.dump(object: 5.0))
                     // try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml)
+
+                    try await tester.run(
+                        config: config,
+                        seeds: self.seeds.count > 0 ? self.seeds : nil,
+                        delay: self.delay
+                    )
+
+                    // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> Void in
+                    //     // switch platform {
+                    //     //     case .openke:
+                    //     //         throw NotImplementedError("Openke platform is not supported")
+                    //     //     case .grapex:
+                    //     //         try await GrapexTester(
+                    //     //             model: model.asOpenKeModel,
+                    //     //             configRoot: configRoot
+                    //     //         ).run(
+                    //     //             config: config,
+                    //     //             seeds: seeds.count > 0 ? seeds : nil,
+                    //     //             delay: delay
+                    //     //         )
+                    //     // }
+                    // }
+
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
                     //     try await OpenKeTester(
                     //         model: model_.asOpenKeModel,

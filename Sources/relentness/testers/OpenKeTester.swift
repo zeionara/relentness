@@ -96,7 +96,7 @@ public struct OpenKeTester: Tester {
                 args: args,
                 env: envVars,
                 terminationDelay: terminationDelay
-            )
+            )!
         } handleExecutionTimeMeasurement: { output, nSeconds in
             return MeagerMetricSet(
                 output,

@@ -250,20 +250,21 @@ public struct CompareModels: ParsableCommand {
                                     hparams: hparams
                                 )
                             case .grapex:
-                                return try await GrapexTester(
-                                    model: model.architecture.asGrapexModel,
-                                    env: grapexRoot_,
-                                    corpus: corpus_,
-                                    nWorkers: nWorkers_,
-                                    remove: remove_,
-                                    gpu: gpu_,
-                                    differentGpus: differentGpus_,
-                                    terminationDelay: terminationDelay_
-                                ).run(
-                                    seeds: seeds_.count > 0 ? seeds_ : nil,
-                                    delay: delay_,
-                                    hparams: hparams
-                                )
+                                throw NotImplementedError.platformIsNotSupported(name: "grapex")
+                                // return try await GrapexTester(
+                                //     model: model.architecture.asGrapexModel,
+                                //     env: grapexRoot_,
+                                //     corpus: corpus_,
+                                //     nWorkers: nWorkers_,
+                                //     remove: remove_,
+                                //     gpu: gpu_,
+                                //     differentGpus: differentGpus_,
+                                //     terminationDelay: terminationDelay_
+                                // ).run(
+                                //     seeds: seeds_.count > 0 ? seeds_ : nil,
+                                //     delay: delay_,
+                                //     hparams: hparams
+                                // )
                             }
                         }
 
@@ -383,22 +384,23 @@ public struct CompareModels: ParsableCommand {
                                    usingValidationSubset: true
                                 )
                             case .grapex:
-                                return try await GrapexTester(
-                                    model: model.architecture.asGrapexModel,
-                                    env: grapexRoot_,
-                                    corpus: corpus_,
-                                    nWorkers: nWorkers_,
-                                    remove: remove_,
-                                    gpu: gpu_,
-                                    differentGpus: differentGpus_,
-                                    terminationDelay: terminationDelay_
-                                ).runSingleTest(
-                                    seeds: seeds_.count > 0 ? seeds_ : nil,
-                                    delay: delay_,
-                                    cvSplitIndex: 0,
-                                    hparams: modelHparams,
-                                    usingValidationSubset: true
-                                )
+                                throw NotImplementedError.platformIsNotSupported(name: "grapex")
+                                // return try await GrapexTester(
+                                //     model: model.architecture.asGrapexModel,
+                                //     env: grapexRoot_,
+                                //     corpus: corpus_,
+                                //     nWorkers: nWorkers_,
+                                //     remove: remove_,
+                                //     gpu: gpu_,
+                                //     differentGpus: differentGpus_,
+                                //     terminationDelay: terminationDelay_
+                                // ).runSingleTest(
+                                //     seeds: seeds_.count > 0 ? seeds_ : nil,
+                                //     delay: delay_,
+                                //     cvSplitIndex: 0,
+                                //     hparams: modelHparams,
+                                //     usingValidationSubset: true
+                                // )
                         }
                     }
 

@@ -1,6 +1,6 @@
 import Swat
 
-struct Config: ConfigWithDefaultKeys, RootConfig {
+public struct Config: ConfigWithDefaultKeys, RootConfig {
     let corpus: Corpus
     let sampler: Sampler_
     let evaluator: Evaluator
@@ -10,9 +10,9 @@ struct Config: ConfigWithDefaultKeys, RootConfig {
     let optimizer: Optimizer_
     let checkpoint: Checkpoint
 
-    let name: String
+    public let name: String
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: AnyKey.self)
 
         try container.encode(corpus, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("corpus")))
@@ -25,5 +25,20 @@ struct Config: ConfigWithDefaultKeys, RootConfig {
         try container.encode(checkpoint, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("checkpoint")))
 
         try container.encode(name, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("name")))
+    }
+
+    func appending(cvSplitIndex: Int) -> Config {
+        return Config(
+            corpus: corpus.appending(cvSplitIndex: cvSplitIndex),
+            sampler: sampler,
+            evaluator: evaluator,
+
+            model: model,
+            trainer: trainer,
+            optimizer: optimizer,
+            checkpoint: checkpoint,
+            
+            name: name
+        )
     }
 }
