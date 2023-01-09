@@ -15,16 +15,16 @@ struct Model_: ConfigWithDefaultKeys {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: AnyKey.self)
 
-        try container.encode(encoder.userInfo.postProcess("\(model)"), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("model")))
-        try container.encode(hiddenSize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("hidden_size")))
-        try container.encode(reverse, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("reverse")))
+        try container.encode(encoder.userInfo.postProcess(model.rawValue), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("model")))
+        try container.encode(hiddenSize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("hiddenSize")))
+        try container.encode(encoder.userInfo.postProcessBool(reverse), forKey: AnyKey(stringValue: encoder.userInfo.postProcess("reverse")))
 
         if let entitySize = entitySize {
-            try container.encode(entitySize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("entity_size")))
+            try container.encode(entitySize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("entitySize")))
         }
 
         if let relationSize = relationSize {
-            try container.encode(relationSize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("relation_size")))
+            try container.encode(relationSize, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("relationSize")))
         }
     }
 }

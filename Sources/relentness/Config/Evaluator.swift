@@ -45,7 +45,7 @@ extension Evaluator.Task: Codable {
 
         try container.encode(
             encoder.userInfo.postProcess(
-                "\(self)".fromCamelCaseToSnakeCase()
+                "\(self)"
             )
         )
     }
@@ -89,14 +89,14 @@ extension Evaluator.Metric: Codable {
                 var container = encoder.unkeyedContainer()
                 try container.encode(
                     encoder.userInfo.postProcess(
-                        "\(self)".fromCamelCaseToSnakeCase()
+                        "\(self)"
                     )
                 )
             case let .top(n: n):
                 var container = encoder.unkeyedContainer()
                 try container.encode(
                     encoder.userInfo.postProcess(
-                        "top"
+                        "topN"
                     )
                 )
                 try container.encode(n)

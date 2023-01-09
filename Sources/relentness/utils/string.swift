@@ -109,19 +109,23 @@ public extension String {
             .joined()
     }
 
-    fileprivate func processCamelCaseRegex(pattern: String) -> String? {
+    fileprivate func processCamelCaseRegex(pattern: String, sep separator: String) -> String? {
       let regex = try? NSRegularExpression(pattern: pattern, options: [])
       let range = NSRange(location: 0, length: count)
-      return regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2")
+      return regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1\(separator)$2")
     }
 
-    func fromCamelCaseToSnakeCase() -> String {
+    func fromCamelCaseToSnakeCase(sep separator: String = "_") -> String {
         let acronymPattern = "([A-Z]+)([A-Z][a-z]|[0-9])"
         let fullWordsPattern = "([a-z])([A-Z]|[0-9])"
         let digitsFirstPattern = "([0-9])([A-Z])"
-        return self.processCamelCaseRegex(pattern: acronymPattern)?
-          .processCamelCaseRegex(pattern: fullWordsPattern)?
-          .processCamelCaseRegex(pattern:digitsFirstPattern)?.lowercased() ?? self.lowercased()
+        return self.processCamelCaseRegex(pattern: acronymPattern, sep: separator)?
+          .processCamelCaseRegex(pattern: fullWordsPattern, sep: separator)?
+          .processCamelCaseRegex(pattern:digitsFirstPattern, sep: separator)?.lowercased() ?? self.lowercased()
+    }
+
+    func fromCamelCaseToKebabCase() -> String {
+        return fromCamelCaseToSnakeCase(sep: "-")
     }
 
     var atom: String {

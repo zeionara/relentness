@@ -43,7 +43,7 @@ public extension Array {
         var currentIndex = 0
         var chunks = [[Element]]()
 
-        for i in 0..<nChunks {
+        for _ in 0..<nChunks {
             let nextIndex = currentIndex + nElementsPerChunk
             let currentChunk = Array(self[currentIndex..<nextIndex])
 
@@ -118,9 +118,19 @@ public extension Dictionary where Key == CodingUserInfoKey, Value == Any {
     func postProcess(_ value: String) -> String {
         if let platform = self[PLATFORM_CODING_USER_INFO_KEY] as? Platform {
             if platform == .grapex {
-                return value.atom
+                return value.fromCamelCaseToSnakeCase().atom
             }
         }
+        return value.fromCamelCaseToKebabCase()
+    }
+
+    func postProcessBool(_ value: Bool) -> Encodable {
         return value
+        // if let platform = self[PLATFORM_CODING_USER_INFO_KEY] as? Platform {
+        //     if platform == .grapex {
+        //         return String(value).atom
+        //     }
+        // }
+        // return value
     }
 }
