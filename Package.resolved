@@ -51,7 +51,7 @@
         "repositoryURL": "https://github.com/zeionara/Swat.git",
         "state": {
           "branch": "master",
-          "revision": "3923aadd0b8676c8f1550333af04c8059a97a360",
+          "revision": "a37af87634c37829b75accd2c79d6f2fd9335b67",
           "version": null
         }
       },
@@ -138,11 +138,11 @@
       },
       {
         "package": "Yams",
-        "repositoryURL": "https://github.com/jpsim/Yams.git",
+        "repositoryURL": "https://github.com/zeionara/Yams.git",
         "state": {
-          "branch": null,
-          "revision": "01835dc202670b5bb90d07f3eae41867e9ed29f6",
-          "version": "5.0.1"
+          "branch": "main",
+          "revision": "12a673d6e47dbd627de403fb032ad8b00aab47b5",
+          "version": null
         }
       }
     ]

@@ -4,8 +4,6 @@ import Logging
 import wickedData
 import Swat
 
-// import Yams
-
 public class HyperSearch: ParsableCommand {
     // @Argument(help: "Name of folder which keeps the dataset for testing")
     // var corpus: String
@@ -91,7 +89,6 @@ public class HyperSearch: ParsableCommand {
                 do {
                     logger.info("\(config.row)")
                     try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: self.platform])
-                    // print((5.0).represented())
                     // print(try Yams.dump(object: 5.0))
                     // try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml)
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
