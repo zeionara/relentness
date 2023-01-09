@@ -17,6 +17,9 @@ public class HyperSearch: ParsableCommand {
     @Option(name: .shortAndLong, help: "Conda environment name to activate before running test")
     var env: String = "reltf"
 
+    @Option(name: .shortAndLong, help: "Name of config to use for checking hyperparameter value combinations")
+    var config: String = "default"
+
     // @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
     // var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
 
@@ -60,7 +63,7 @@ public class HyperSearch: ParsableCommand {
 
         let logger = Logger(level: verbose ? .trace : .info, label: "main")
 
-        let configs: [Config] = try ConfigFactory(at: Path.config).make()
+        let configs: [Config] = try ConfigFactory(at: Path.config).make(from: config.yaml)
 
         // let env_ = env
         // // let corpus_ = corpus
@@ -81,6 +84,10 @@ public class HyperSearch: ParsableCommand {
         // logger.info("\(HyperParamSet.header)\t\(MeagerMetricSeries.headerWithExecutionTime)")
         logger.info("\(configs.first!.header)")
 
+        let configRoot = Path.assets.appendingPathComponent("Config").appendingPathComponent(config)
+
+        try FileManager.default.createDirectory(atPath: configRoot.path, withIntermediateDirectories: true, attributes: nil)  // create config root if not exists, if exists then nothing happens
+
         BlockingTask {
             // let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
 
@@ -88,7 +95,9 @@ public class HyperSearch: ParsableCommand {
             for config in configs {
                 do {
                     logger.info("\(config.row)")
-                    try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: self.platform])
+                    // try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: self.platform])
+                    let configPath = configRoot.appendingPathComponent(config.name.yaml)
+                    try config.write(to: configPath, as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: self.platform])
                     // print(try Yams.dump(object: 5.0))
                     // try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml)
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in

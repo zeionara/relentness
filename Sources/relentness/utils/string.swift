@@ -132,3 +132,15 @@ public extension String {
         return ":\(self)"
     }
 }
+
+public extension String {
+    static let yaml_extension = "yml"
+
+    func append(extension ext: String) -> String {
+        return "\(self).\(ext)"
+    }
+
+    var yaml: String {
+        return append(extension: String.yaml_extension)
+    }
+}
