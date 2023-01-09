@@ -82,9 +82,9 @@ public struct GrapexTester {
 
         // Configure env
 
-        // let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3", "LC_ALL": "en_US.UTF-8"]
+        let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3", "LC_ALL": "en_US.UTF-8"]
         // let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3"]
-        let envVars = [String: String]()
+        // let envVars = [String: String]()
 
         // if gpu {
         //     args.append(
