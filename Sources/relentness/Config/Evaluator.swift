@@ -1,16 +1,10 @@
 import Swat
-// import Runtime
 
 enum CodingError: Error {
     case unknownValue
 }
 
 struct Evaluator: ConfigWithDefaultKeys {
-    enum Keys: CodingKey {
-        case task
-        case metrics
-    }
-
     enum Metric {
         case top(n: Int)
         case rank
@@ -27,12 +21,6 @@ struct Evaluator: ConfigWithDefaultKeys {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: AnyKey.self)
-
-        // for property in try typeInfo(of: Self.self).properties {
-        //     print(property.name, try property.get(from: self))
-
-        //     try container.encode(property.get(from: self) as! Task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess(property.name)))
-        // }
 
         try container.encode(task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("task")))
         try container.encode(metrics, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("metrics")))
@@ -54,22 +42,12 @@ extension Evaluator.Task: Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        // var value = "\(self)".fromCamelCaseToSnakeCase()
-
-        // if let platform = encoder.userInfo[CodingUserInfoKey(rawValue: "platform")!] as? Platform {
-        //     if platform == .grapex {
-        //         value = value.atom
-        //     }
-        // }
 
         try container.encode(
             encoder.userInfo.postProcess(
                 "\(self)".fromCamelCaseToSnakeCase()
             )
         )
-        // try container.encode(value)
-        // var container = encoder.unkeyedContainer()
-        // try container.encode(contentsOf: ["\(self)".fromCamelCaseToSnakeCase().atom])
     }
 
 }
@@ -108,8 +86,6 @@ extension Evaluator.Metric: Codable {
     func encode(to encoder: Encoder) throws {
         switch self {
             case .rank, .reciprocalRank:
-                // var container = encoder.singleValueContainer()
-                // try container.encode("\(self)".fromCamelCaseToSnakeCase().atom)
                 var container = encoder.unkeyedContainer()
                 try container.encode(
                     encoder.userInfo.postProcess(
@@ -117,8 +93,6 @@ extension Evaluator.Metric: Codable {
                     )
                 )
             case let .top(n: n):
-                // var container = encoder.container(keyedBy: EncodedTop.self)
-                // try container.encode(n, forKey: .n)
                 var container = encoder.unkeyedContainer()
                 try container.encode(
                     encoder.userInfo.postProcess(
