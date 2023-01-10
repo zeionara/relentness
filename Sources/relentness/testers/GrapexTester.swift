@@ -47,7 +47,7 @@ public struct GrapexTester {
 
         // Configure args
 
-        var args = ["run", "main.exs", "\(configPath.path)"]
+        var args = ["run", "main.exs", "\(configPath.path)", "-c"]
         // var args = ["test", "\(corpus)/\(String(format: "%04i", cvSplitIndex))", "-m", model.rawValue, "-t"]
         // if let unwrappedHparams = hparams {
         //     // print("Unwrapped hparams")

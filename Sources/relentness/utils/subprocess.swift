@@ -104,7 +104,12 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
             print("output: ")
             if let unwrappedOutputData = outputData {
                 let output = String(decoding: unwrappedOutputData, as: UTF8.self)
-                print(output)
+                // print(unwrappedOutputData.base64EncodedString())
+                // unwrappedOutputData.forEach{item in print(item)}
+                // print(unwrappedOutputData[0], unwrappedOutputData[1])
+                // print(type(of: unwrappedOutputData))
+                // print(output.unicodeScalars.map{character in character.value})
+                print(try output.bytes)
                 return dropNewLine ? String(output.dropLast()) : String(output)
             }
         } catch {

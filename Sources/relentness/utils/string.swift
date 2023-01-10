@@ -150,3 +150,30 @@ public extension String {
         return URL(string: self)!.appendingPathComponent(component).path
     }
 }
+
+public enum StringDecodingError: Error {
+    case cannotConvertToByte(character: Unicode.Scalar)
+}
+
+public extension String {
+    static let maxByteValue = 255
+
+    var bytes: [UInt8] {
+        get throws {
+            let bytes = try self.unicodeScalars.map{ character in
+                let value = character.value
+
+                if value > String.maxByteValue {
+                    throw StringDecodingError.cannotConvertToByte(character: character)
+                }
+
+                return UInt8(value)
+            }
+
+            if bytes.count > 1 {
+                return bytes.dropLast()
+            }
+            return bytes
+        }
+    }
+}
