@@ -1,3 +1,5 @@
+import Foundation
+
 public extension Array {
     func groupsWithExtension(nChunks: Int, nElementsPerChunk: Int, nRemainingElements: Int) -> [[Element]] {
         // nChunks will be preserved, remaining elements will be distributed among the given chunks (nRemainingElements must be <= nChunks)
@@ -132,5 +134,36 @@ public extension Dictionary where Key == CodingUserInfoKey, Value == Any {
         //     }
         // }
         // return value
+    }
+}
+
+public extension Array where Element == UInt8 {
+    func decode(startingAt offset: Int) -> (last: Int, string: String) {
+        let relevantBytes = self[offset...]
+        let stringEnd = relevantBytes.firstIndex(of: 0)!
+
+        return (last: stringEnd, string: String(relevantBytes[..<stringEnd].map{code in Character(Unicode.Scalar(code))}))
+    }
+
+    func decode(startingAt offset: Int) -> Double {
+        let relevantBytes: [UInt8] = Array(self[offset..<offset + 8])
+
+        // print(relevantBytes)
+        // print(relevantBytes.withUnsafeBytes{ $0.load(as: UInt64.self) })
+
+        let data = Data(relevantBytes)
+
+        return Double(bitPattern: UInt64(bigEndian: data.withUnsafeBytes{ $0.load(as: UInt64.self) }))
+    }
+
+    func decode(startingAt offset: Int) -> Int {
+        let relevantBytes: [UInt8] = Array(self[offset..<offset + 2])
+
+        // print(relevantBytes)
+        // print(relevantBytes.withUnsafeBytes{ $0.load(as: UInt64.self) })
+
+        let data = Data(relevantBytes)
+        
+        return Int(UInt16(littleEndian: data.withUnsafeBytes{ $0.load(as: UInt16.self) }))
     }
 }

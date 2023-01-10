@@ -1,7 +1,7 @@
 import Swat
 
 enum CodingError: Error {
-    case unknownValue
+    case unknown(value: String)
 }
 
 struct Evaluator: ConfigWithDefaultKeys {
@@ -25,6 +25,7 @@ struct Evaluator: ConfigWithDefaultKeys {
         try container.encode(task, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("task")))
         try container.encode(metrics, forKey: AnyKey(stringValue: encoder.userInfo.postProcess("metrics")))
     }
+
 }
 
 extension Evaluator.Task: Codable {
@@ -36,7 +37,7 @@ extension Evaluator.Task: Codable {
             case "triple-classification":
                 self = .tripleClassification
             default:
-                throw CodingError.unknownValue
+                throw CodingError.unknown(value: "unknown")
         }
     }
 
@@ -76,10 +77,10 @@ extension Evaluator.Metric: Codable {
                 case "reciprocal-rank":
                     self = .reciprocalRank
                 default:
-                    throw CodingError.unknownValue
+                    throw CodingError.unknown(value: metric)
             }
         } else {
-            throw CodingError.unknownValue
+            throw CodingError.unknown(value: "unknown")
         }
     }
 
@@ -103,4 +104,34 @@ extension Evaluator.Metric: Codable {
         }
     }
 
+    static func decode(from bytes: [UInt8], startingAt offset: inout Int) throws -> Self {
+        let length = bytes[offset]
+
+        offset += 1
+
+        let (offset_, name) = bytes.decode(startingAt: offset)
+        offset = offset_
+        offset += 1
+
+        if (length > 0) {
+            let n: Int = bytes.decode(startingAt: offset)
+
+            offset += 2
+
+            // print(name, n)
+
+            if name == "top_n" {
+                return .top(n: n)
+            }
+        }
+
+        if name == "rank" {
+            return .rank
+        }
+        if name == "reciprocal_rank" {
+            return .reciprocalRank
+        }
+
+        throw CodingError.unknown(value: name)
+    }
 }

@@ -98,7 +98,7 @@ public struct GrapexTester {
         print("Running command '\(args.joined(separator: " "))'")
 
         do {
-            _ = try await runSubprocessAndGetOutput(
+            let metrics = try await runSubprocessAndGetOutput(
                 // path: "/home/\(USER)/\(env)/grapex",
                 path: URL(fileURLWithPath: "/home/\(USER)/\(env)"),
                 executable: URL(fileURLWithPath: "/home/\(USER)/.asdf/shims/mix"),
@@ -106,6 +106,7 @@ public struct GrapexTester {
                 env: envVars,
                 terminationDelay: terminationDelay
             )
+            print(metrics)
             // return try await measureExecutionTime {
             //     try await runSubprocessAndGetOutput(
             //         path: "/home/\(USER)/\(env)/grapex",

@@ -40,7 +40,8 @@ public func runScriptAndGetOutput(_ fileName: String) throws -> String? {
     )
 }
 
-public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
+// public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> String {
+public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String], env: [String: String], dropNewLine: Bool = true, terminationDelay: Double? = nil, retryOnError: Bool = false) async throws -> MetricTree {
     while true { // Repeat process execution until success (testing process can be killed with kill -9 $(ps -aux | grep "python -m relentness" | grep -v "grep" | cut -d " " -f7)
         let task = Process()
 
@@ -104,20 +105,23 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
             print("output: ")
             if let unwrappedOutputData = outputData {
                 let output = String(decoding: unwrappedOutputData, as: UTF8.self)
+                // print(unwrappedOutputData)
                 // print(unwrappedOutputData.base64EncodedString())
                 // unwrappedOutputData.forEach{item in print(item)}
                 // print(unwrappedOutputData[0], unwrappedOutputData[1])
                 // print(type(of: unwrappedOutputData))
                 // print(output.unicodeScalars.map{character in character.value})
-                print(try output.bytes)
-                return dropNewLine ? String(output.dropLast()) : String(output)
+                // print(try output.bytes)
+                // print(try MetricTree(from: output))
+                return try MetricTree(from: output)
+                // return dropNewLine ? String(output.dropLast()) : String(output)
             }
         } catch {
             if retryOnError {
                 print("Error running subprocess, retrying...")
             } else {
-                print("Subprocess thrown an exception, exiting...")
-                return String(describing: error)
+                print("Subprocess thrown an exception: \(String(describing: error)), exiting...")
+                // return String(describing: error)
             }
         }
         // let _ = errorData == nil ? nil : String(decoding: errorData!, as: UTF8.self)
