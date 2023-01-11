@@ -2,6 +2,7 @@ import Swat
 
 enum CodingError: Error {
     case unknown(value: String)
+    case cannotEncode(metric: String)
 }
 
 struct Evaluator: ConfigWithDefaultKeys {
@@ -9,6 +10,7 @@ struct Evaluator: ConfigWithDefaultKeys {
         case top(n: Int)
         case rank
         case reciprocalRank
+        case time
     }
 
     enum Task {
@@ -101,6 +103,8 @@ extension Evaluator.Metric: Codable {
                     )
                 )
                 try container.encode(n)
+            case .time:
+                throw CodingError.cannotEncode(metric: "\(self)")
         }
     }
 

@@ -2,6 +2,11 @@ struct MetricNode {
     let label: String
     let tree: MetricTree
 
+    init(_ tree: MetricTree, label: String) {
+        self.tree = tree
+        self.label = label
+    }
+
     init(from bytes: [UInt8], startingAt offset: inout Int) throws {
         // let length = bytes.first!
         // label = "foo"
@@ -30,6 +35,14 @@ struct Measurement {
 public struct MetricTree {
     var childs: [MetricNode]? = nil
     var measurements: [Measurement]? = nil
+
+    init(_ measurements: Measurement...) {
+        self.measurements = measurements
+    }
+
+    init(_ childs: MetricNode...) {
+        self.childs = childs
+    }
 
     init(from string: String) throws {
         var offset = 0

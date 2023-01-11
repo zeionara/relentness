@@ -36,12 +36,12 @@ public struct GrapexTester {
     }
 
     // public func runSingleTest(config: Config, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Metrics {
-    public func runSingleTest(config: Config, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Void {
-        try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, workerIndex: workerIndex, seed: seed)
+    public func runSingleTest(config: Config, workerIndex: Int? = nil, seed: Int? = nil) async throws -> MetricTree {
+        return try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, workerIndex: workerIndex, seed: seed)
     }
 
     // public func runSingleTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Metrics {
-    public func runSingleTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Void {
+    public func runSingleTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> MetricTree {
         let configPath = configRoot.appendingPathComponent(config.name.yaml)
         try config.write(to: configPath, as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: Platform.grapex])
 
@@ -98,28 +98,31 @@ public struct GrapexTester {
         print("Running command '\(args.joined(separator: " "))'")
 
         do {
-            let metrics = try await runSubprocessAndGetOutput(
-                // path: "/home/\(USER)/\(env)/grapex",
-                path: URL(fileURLWithPath: "/home/\(USER)/\(env)"),
-                executable: URL(fileURLWithPath: "/home/\(USER)/.asdf/shims/mix"),
-                args: args,
-                env: envVars,
-                terminationDelay: terminationDelay
-            )
-            print(metrics)
-            // return try await measureExecutionTime {
-            //     try await runSubprocessAndGetOutput(
-            //         path: "/home/\(USER)/\(env)/grapex",
-            //         args: args,
-            //         env: envVars,
-            //         terminationDelay: terminationDelay
-            //     )
-            // } handleExecutionTimeMeasurement: { output, nSeconds in
-            //     return MeagerMetricSet(
-            //         output,
-            //         time: nSeconds
-            //     )
-            // }
+            let metrics = try await measureExecutionTime {
+                try await runSubprocessAndGetOutput(
+                    // path: "/home/\(USER)/\(env)/grapex",
+                    path: URL(fileURLWithPath: "/home/\(USER)/\(env)"),
+                    executable: URL(fileURLWithPath: "/home/\(USER)/.asdf/shims/mix"),
+                    args: args,
+                    env: envVars,
+                    terminationDelay: terminationDelay
+                )
+            } handleExecutionTimeMeasurement: { output, nSeconds -> MetricTree in
+                return MetricTree(
+                    MetricNode(
+                        MetricTree(
+                            Measurement(metric: .time, value: nSeconds)
+                        ),
+                        label: "speed"
+                    ),
+                    MetricNode(
+                        output,
+                        label: "accuracy"
+                    )
+                )
+            }
+            // print(metrics)
+            return metrics
         } catch let error {
            print("Failed testing. Command which was used to start the process: \(args.joined(separator: " "))") 
            throw error 
@@ -127,16 +130,16 @@ public struct GrapexTester {
     }
 
     // public func runSingleTest(config: Config, seeds: [Int]? = nil, delay: Double?) async throws -> [Metrics] {
-    public func runSingleTest(config: Config, seeds: [Int]? = nil, delay: Double?) async throws {
-        _ = try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, seeds: seeds, delay: delay)
+    public func runSingleTest(config: Config, seeds: [Int]? = nil, delay: Double?) async throws -> [MetricTree] {
+        return try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, seeds: seeds, delay: delay)
     }
 
     // public func runSingleTest(config: Config, cvSplitIndex: Int, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [Metrics] {
-    public func runSingleTest(config: Config, cvSplitIndex: Int, seeds: [Int]? = nil, delay: Double? = nil) async throws {
+    public func runSingleTest(config: Config, cvSplitIndex: Int, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [MetricTree] {
         if let seeds = seeds {
             if let nWorkers = nWorkers, nWorkers > 1 {
-                _ = try await seeds.asyncMap(nWorkers: nWorkers, delay: delay) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
-                    try await runSingleTest(
+                return try await seeds.asyncMap(nWorkers: nWorkers, delay: delay) { seed, workerIndex in // TODO: Add support for total time (instead of computing sum, here max must me chosen)
+                    return try await runSingleTest(
                         config: config,
                         cvSplitIndex: cvSplitIndex,
                         workerIndex: workerIndex,
@@ -144,8 +147,8 @@ public struct GrapexTester {
                     ) 
                 }
             } else {
-               _ = try await seeds.map { seed in
-                    try await runSingleTest(
+               return try await seeds.map { seed in
+                    return try await runSingleTest(
                         config: config,
                         cvSplitIndex: cvSplitIndex,
                         workerIndex: 0,
@@ -155,15 +158,15 @@ public struct GrapexTester {
             }
         }
 
-        // let result: Metrics = try await runSingleTest(cvSplitIndex: cvSplitIndex)
-        // return [result]
+        let result = try await runSingleTest(config: config, cvSplitIndex: cvSplitIndex, seed: nil)
+        return [result]
     }
 
     // public func run(seeds: [Int]? = nil, delay: Double? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
     // public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [[Metrics]] {
-    public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws {
-        _ = try await getNestedFolderNames(Path.corpora.appendingPathComponent(config.corpus.path)).map { cvSplitStringifiedIndex in // No parallelism on this level, cv splits are handled sequentially
-            _ =  try await runSingleTest(
+    public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [[MetricTree]] {
+        return try await getNestedFolderNames(Path.corpora.appendingPathComponent(config.corpus.path)).map { cvSplitStringifiedIndex in // No parallelism on this level, cv splits are handled sequentially
+            return try await runSingleTest(
                 config: config.appending(cvSplitIndex: cvSplitStringifiedIndex.asInt),
                 cvSplitIndex: cvSplitStringifiedIndex.asInt,
                 seeds: seeds,

@@ -106,11 +106,13 @@ public class HyperSearch: ParsableCommand {
                     // print(try Yams.dump(object: 5.0))
                     // try config.write(to: Path.assets.appendingPathComponent("config_\(config.name).yml"), as: .yaml)
 
-                    try await tester.run(
+                    let metrics = try await tester.run(
                         config: config,
                         seeds: self.seeds.count > 0 ? self.seeds : nil,
                         delay: self.delay
                     )
+
+                    print(metrics)
 
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> Void in
                     //     // switch platform {
