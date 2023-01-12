@@ -99,7 +99,11 @@ public struct GrapexTester {
                 )
             }
 
-            logger.info("metrics:\n\(metrics.describe())")
+            if let seed = seed {
+                logger.info("metrics for \(cvSplitIndex) split and seed = \(seed):\n\(metrics.describe())")
+            } else {
+                logger.info("metrics for \(cvSplitIndex) split:\n\(metrics.describe())")
+            }
 
             return metrics
         } catch let error {

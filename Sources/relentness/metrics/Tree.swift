@@ -56,6 +56,15 @@ public struct MetricTree {
         case numberOfPartMetricsDoesNotMatch(forLabels: [String])
     }
 
+    public struct Description: CustomStringConvertible {
+        public let description: String
+
+        let metrics: [Evaluator.Metric]
+
+        let means: [Double]
+        let stds: [Double]
+    }
+
     var childs: [MetricNode]? = nil
     var measurements: [Measurement]? = nil
 
@@ -161,7 +170,7 @@ public struct MetricTree {
         collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
     }
 
-    public func describe(accuracy: Int = 5, valueWidth: Int = 16, labelWidth: Int = 32) -> String {
+    public func describe(accuracy: Int = 5, valueWidth: Int = 16, labelWidth: Int = 32) -> Description {
         var collectedMeasurements = OrderedDictionary<[String], [Measurement]>() // [[String]: [Measurement]]()
         var transposedMetrics = OrderedDictionary<Evaluator.Metric, [Double]>()
         var collectedMetrics = OrderedSet<Evaluator.Metric>()
@@ -249,6 +258,7 @@ public struct MetricTree {
 
         // print(means, stds)
 
-        return "\(header)\n\(rows)"
+        return Description(description: "\(header)\n\(rows)", metrics: Array(collectedMetrics[..<partRowLength!]), means: means, stds: stds)
     }
 }
+
