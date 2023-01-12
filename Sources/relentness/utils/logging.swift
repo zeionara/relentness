@@ -103,4 +103,3 @@ public extension Optional where Wrapped == Logger {
         }
     }
 }
-

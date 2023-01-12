@@ -65,7 +65,9 @@ public class HyperSearch: ParsableCommand {
 
         setupLogging(path: logFileName, verbose: verbose, discardExistingLogFile: discardExistingLogFile)  
 
-        let logger = Logger(level: verbose ? .trace : .info, label: "main")
+        let logLevel: Logger.Level = verbose ? .trace : .info
+
+        let logger = Logger(level: logLevel, label: "main")
 
         let configs: [Config] = try ConfigFactory(at: Path.config).make(from: config.yaml)
 
@@ -94,7 +96,7 @@ public class HyperSearch: ParsableCommand {
 
         BlockingTask {
             // let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
-            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env)
+            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env, logLevel: logLevel)
 
             // for hparams in sets.storage.sets {
             for config in configs {
@@ -112,7 +114,7 @@ public class HyperSearch: ParsableCommand {
                         delay: self.delay
                     )
 
-                    print(metrics)
+                    // print(metrics)
 
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> Void in
                     //     // switch platform {

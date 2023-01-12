@@ -1,11 +1,11 @@
 import Foundation
+import Logging
 
 public enum GrapexModel: String, Sendable {
     case transe
     case se
 }
 
-// public struct GrapexTester: Tester {
 public struct GrapexTester {
     public typealias Metrics = MeagerMetricSet
 
@@ -21,7 +21,13 @@ public struct GrapexTester {
 
     public let nWorkers: Int?
 
-    public init(model: GrapexModel, configRoot: URL, env: String, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil, nWorkers: Int? = nil) {
+    private let logger: Logger
+
+    public init(
+        model: GrapexModel, configRoot: URL, env: String, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil, nWorkers: Int? = nil, logLevel: Logger.Level = .info
+    ) {
+        logger = Logger(level: logLevel, label: "grapex-tester")
+
         self.model = model
 
         self.gpu = gpu
@@ -35,12 +41,10 @@ public struct GrapexTester {
         self.nWorkers = nWorkers
     }
 
-    // public func runSingleTest(config: Config, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Metrics {
     public func runSingleTest(config: Config, workerIndex: Int? = nil, seed: Int? = nil) async throws -> MetricTree {
         return try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, workerIndex: workerIndex, seed: seed)
     }
 
-    // public func runSingleTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> Metrics {
     public func runSingleTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> MetricTree {
         let configPath = configRoot.appendingPathComponent(config.name.yaml)
         try config.write(to: configPath, as: .yaml, userInfo: [PLATFORM_CODING_USER_INFO_KEY: Platform.grapex])
@@ -48,15 +52,6 @@ public struct GrapexTester {
         // Configure args
 
         var args = ["run", "main.exs", "\(configPath.path)", "-c"]
-        // var args = ["test", "\(corpus)/\(String(format: "%04i", cvSplitIndex))", "-m", model.rawValue, "-t"]
-        // if let unwrappedHparams = hparams {
-        //     // print("Unwrapped hparams")
-        //     // print(unwrappedHparams)
-
-        //     // print("Grapex args")
-        //     // print(unwrappedHparams.grapexArgs)
-        //     args.append(contentsOf: unwrappedHparams.grapexArgs)
-        // }
 
         if let seed = seed {
             args.append(
@@ -64,27 +59,9 @@ public struct GrapexTester {
             )
         }
 
-        // if let unwrappedSeed = seed {
-        //     args.append(
-        //         contentsOf: ["-s", String(describing: unwrappedSeed)]
-        //     )
-        // } else {
-        //     args.append("-r")
-        // }
-
-        // if (remove && !args.contains("-r")) {
-        //     args.append("-r")
-        // }
-
-        // if usingValidationSubset {
-        //     args.append("--validate")
-        // }
-
         // Configure env
 
         let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3", "LC_ALL": "en_US.UTF-8"]
-        // let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3"]
-        // let envVars = [String: String]()
 
         // if gpu {
         //     args.append(
@@ -95,7 +72,7 @@ public struct GrapexTester {
         //     }
         // }
 
-        print("Running command '\(args.joined(separator: " "))'")
+        logger.debug("Running command '\(args.joined(separator: " "))'")
 
         do {
             let metrics = try await measureExecutionTime {
@@ -121,20 +98,20 @@ public struct GrapexTester {
                     )
                 )
             }
-            // print(metrics)
+
+            print(metrics)
+
             return metrics
         } catch let error {
-           print("Failed testing. Command which was used to start the process: \(args.joined(separator: " "))") 
+           logger.error("Failed testing. Command which was used to start the process: \(args.joined(separator: " "))") 
            throw error 
         }
     }
 
-    // public func runSingleTest(config: Config, seeds: [Int]? = nil, delay: Double?) async throws -> [Metrics] {
     public func runSingleTest(config: Config, seeds: [Int]? = nil, delay: Double?) async throws -> [MetricTree] {
         return try await runSingleTest(config: config, cvSplitIndex: DEFAULT_CV_SPLIT_INDEX, seeds: seeds, delay: delay)
     }
 
-    // public func runSingleTest(config: Config, cvSplitIndex: Int, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [Metrics] {
     public func runSingleTest(config: Config, cvSplitIndex: Int, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [MetricTree] {
         if let seeds = seeds {
             if let nWorkers = nWorkers, nWorkers > 1 {
@@ -162,8 +139,6 @@ public struct GrapexTester {
         return [result]
     }
 
-    // public func run(seeds: [Int]? = nil, delay: Double? = nil, hparams: HyperParamSet? = nil) async throws -> [[Metrics]] {
-    // public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [[Metrics]] {
     public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [[MetricTree]] {
         return try await getNestedFolderNames(Path.corpora.appendingPathComponent(config.corpus.path)).map { cvSplitStringifiedIndex in // No parallelism on this level, cv splits are handled sequentially
             return try await runSingleTest(
@@ -175,8 +150,4 @@ public struct GrapexTester {
             // return result
         }
     }
-
-    // public var corpusPath: String {
-    //     "./Assets/Corpora/\(corpus)"
-    // }
 }
