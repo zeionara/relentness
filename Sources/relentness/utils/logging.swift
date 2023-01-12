@@ -10,7 +10,7 @@ public extension Logger {
 }
 
 public struct FileLogHandler: LogHandler {
-    private let path: String
+    private let path: URL
     private let label: String
     public var logLevel: Logger.Level
 
@@ -30,7 +30,7 @@ public struct FileLogHandler: LogHandler {
         }
     }
 
-    init(level: Logger.Level?, label: String, path: String) {
+    init(level: Logger.Level?, label: String, path: URL) {
         if let unwrappedLevel = level {
             logLevel = unwrappedLevel
         } else {
@@ -64,7 +64,8 @@ public struct FileLogHandler: LogHandler {
 
 public func setupLogging(path: String? = nil, verbose: Bool, discardExistingLogFile: Bool) {
     if let pathUnwrapped = path {
-        let augmentedPath = "Assets/Logs/\(pathUnwrapped).txt"
+        // let augmentedPath = "Assets/Logs/\(pathUnwrapped).txt"
+        let augmentedPath = Path.log.appendingPathComponent(pathUnwrapped.text)
         
         makeSureFileExists(augmentedPath, recreate: discardExistingLogFile)
         LoggingSystem.bootstrap{ label in

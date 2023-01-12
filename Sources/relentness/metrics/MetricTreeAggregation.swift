@@ -88,8 +88,8 @@ public extension Array where Element == MetricTree {
     }
 }
 
-public extension Array {
-    func avg<T>() throws -> T? where Element == Array<T>, T == MetricTree {
+public extension Array where Element == Array<MetricTree> {
+    func avg() throws -> MetricTree? {
         if let averagedTree = try (self.map{ trees in
             if let averagedTree = try trees.avg() {
                 return averagedTree

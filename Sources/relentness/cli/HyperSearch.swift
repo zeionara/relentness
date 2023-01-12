@@ -24,8 +24,8 @@ public class HyperSearch: ParsableCommand {
     @Option(name: .shortAndLong, help: "Name of config to use for checking hyperparameter value combinations")
     var config: String = "default"
 
-    // @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
-    // var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
+    @Option(name: .shortAndLong, help: "Maximum number of concurrently running tests")
+    var nWorkers: Int? // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
 
     // @Option(name: .shortAndLong, help: "Path to yaml file with hyperparams")
     // var path: String // If this argument takes a negative value, then it is considered that no value was provided by user (comment is not relevant)
@@ -96,7 +96,7 @@ public class HyperSearch: ParsableCommand {
 
         BlockingTask {
             // let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
-            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env, logLevel: logLevel)
+            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env, nWorkers: self.nWorkers, logLevel: logLevel)
 
             // for hparams in sets.storage.sets {
             for config in configs {

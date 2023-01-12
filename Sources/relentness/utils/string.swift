@@ -135,6 +135,7 @@ public extension String {
 
 public extension String {
     static let yaml_extension = "yml"
+    static let text_extension = "txt"
 
     func append(extension ext: String) -> String {
         return "\(self).\(ext)"
@@ -142,6 +143,10 @@ public extension String {
 
     var yaml: String {
         return append(extension: String.yaml_extension)
+    }
+
+    var text: String {
+        return append(extension: String.text_extension)
     }
 }
 
