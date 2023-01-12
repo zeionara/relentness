@@ -100,9 +100,9 @@ public struct GrapexTester {
             }
 
             if let seed = seed {
-                logger.info("metrics for \(cvSplitIndex) split and seed = \(seed):\n\(metrics.describe())")
+                logger.debug("metrics for \(cvSplitIndex) split and seed = \(seed):\n\(metrics.describe())")
             } else {
-                logger.info("metrics for \(cvSplitIndex) split:\n\(metrics.describe())")
+                logger.debug("metrics for \(cvSplitIndex) split:\n\(metrics.describe())")
             }
 
             return metrics
@@ -145,12 +145,16 @@ public struct GrapexTester {
 
     public func run(config: Config, seeds: [Int]? = nil, delay: Double? = nil) async throws -> [[MetricTree]] {
         return try await getNestedFolderNames(Path.corpora.appendingPathComponent(config.corpus.path)).map { cvSplitStringifiedIndex in // No parallelism on this level, cv splits are handled sequentially
-            return try await runSingleTest(
+            let seededMetrics = try await runSingleTest(
                 config: config.appending(cvSplitIndex: cvSplitStringifiedIndex.asInt),
                 cvSplitIndex: cvSplitStringifiedIndex.asInt,
                 seeds: seeds,
                 delay: delay
-            ) 
+            )
+
+            // print(try seededMetrics.avg()?.describe())
+
+            return seededMetrics
             // return result
         }
     }

@@ -114,7 +114,11 @@ public class HyperSearch: ParsableCommand {
                         delay: self.delay
                     )
 
-                    // print(metrics)
+                    if let description = try metrics.avg()?.describe() {
+                        logger.info("metrics:\n\(description)")
+                    } else {
+                        logger.error("Cannot generate description")
+                    }
 
                     // let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> Void in
                     //     // switch platform {

@@ -1,6 +1,6 @@
 import OrderedCollections
 
-struct MetricNode {
+public struct MetricNode {
     public static let PART_LABEL = "part"
     public static let WHOLE_LABEL = "whole"
 
@@ -72,7 +72,15 @@ public struct MetricTree {
         self.measurements = measurements
     }
 
+    init(_ measurements: [Measurement]) {
+        self.measurements = measurements
+    }
+
     init(_ childs: MetricNode...) {
+        self.childs = childs
+    }
+
+    init(_ childs: [MetricNode]) {
         self.childs = childs
     }
 
@@ -261,4 +269,3 @@ public struct MetricTree {
         return Description(description: "\(header)\n\(rows)", metrics: Array(collectedMetrics[..<partRowLength!]), means: means, stds: stds)
     }
 }
-
