@@ -192,3 +192,13 @@ extension Array where Element == Measurement {
         }
     }
 }
+
+public extension OrderedDictionary {
+    mutating func append<T>(_ element: T, to key: Key) where Value == Array<T> {
+        if let _ = self[key] {
+            self[key]!.append(element)
+        } else {
+            self[key] = [element]
+        }
+    }
+}

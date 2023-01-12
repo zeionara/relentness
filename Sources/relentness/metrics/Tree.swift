@@ -31,10 +31,15 @@ struct MetricNode {
         tree = try MetricTree(from: bytes, startingAt: &offset)
     }
 
-    func collectMeasurements(labels: [String], measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>, metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>) throws {
+    func collectMeasurements(
+        labels: [String],
+        measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>,
+        metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>,
+        transposed transposedMetrics: inout OrderedDictionary<Evaluator.Metric, [Double]>
+    ) throws {
         // print(label)
         // print(metrics)
-        try tree.collectMeasurements(labels: labels.appending(label), measurements: &collectedMeasurements, metrics: &collectedMetrics)
+        try tree.collectMeasurements(labels: labels.appending(label), measurements: &collectedMeasurements, metrics: &collectedMetrics, transposed: &transposedMetrics)
         // print(metrics)
     }
 }
@@ -121,12 +126,17 @@ public struct MetricTree {
         }
     }
 
-    func collectMeasurements(labels: [String], measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>, metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>) throws {
+    func collectMeasurements(
+        labels: [String],
+        measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>,
+        metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>,
+        transposed transposedMetrics: inout OrderedDictionary<Evaluator.Metric, [Double]>
+    ) throws {
         // print("childs?", childs)
 
         if let childs = childs {
             try childs.forEach{ node in
-                try node.collectMeasurements(labels: labels, measurements: &collectedMeasurements, metrics: &collectedMetrics)
+                try node.collectMeasurements(labels: labels, measurements: &collectedMeasurements, metrics: &collectedMetrics, transposed: &transposedMetrics)
             }
             return
         }
@@ -142,16 +152,22 @@ public struct MetricTree {
         }
 
         collectedMeasurements[labels] = measurements
+        // print(transposedMetrics)
+        measurements.forEach{ measurement in
+            transposedMetrics.append(measurement.value, to: measurement.metric)
+        }
+        // print(transposedMetrics)
         // collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
         collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
     }
 
     public func describe(accuracy: Int = 5, valueWidth: Int = 16, labelWidth: Int = 32) -> String {
         var collectedMeasurements = OrderedDictionary<[String], [Measurement]>() // [[String]: [Measurement]]()
+        var transposedMetrics = OrderedDictionary<Evaluator.Metric, [Double]>()
         var collectedMetrics = OrderedSet<Evaluator.Metric>()
 
         do {
-            try collectMeasurements(labels: [], measurements: &collectedMeasurements, metrics: &collectedMetrics)
+            try collectMeasurements(labels: [], measurements: &collectedMeasurements, metrics: &collectedMetrics, transposed: &transposedMetrics)
         } catch DescriptionError.missingBothChildsAndMeasurements(let labels) {
             print("Missing both childs and measurements: \(labels)")
         } catch DescriptionError.foundConflictingMeasurements(let labels) {
@@ -165,7 +181,7 @@ public struct MetricTree {
 
         // Suppose that values in every partial entry are located in the same order which corresponds to the order of metrics in the $collectedMetrics
         // The partial metrics are stored first
-        let partRows = try! collectedMeasurements.filter{ $0.key.first == MetricNode.PART_LABEL }.map{ (labels, measurements) in
+        var partRows = try! collectedMeasurements.filter{ $0.key.first == MetricNode.PART_LABEL }.map{ (labels, measurements) in
             let row = MetricRow(labels: Array(labels.dropFirst()), values: measurements.values)
 
             if let partRowLength = partRowLength {
@@ -179,6 +195,23 @@ public struct MetricTree {
 
             return row
         }
+
+        var means = [Double]()
+        var stds = [Double]()
+
+        var i = 0
+
+        transposedMetrics.forEach{ (metric, values) in
+            if let partRowLength = partRowLength, (i < partRowLength) {
+                means.append(values.avg())
+                stds.append(values.std())
+                i += 1
+            }
+        }
+
+        partRows.append(MetricRow(labels: ["mean"], values: means))
+        partRows.append(MetricRow(labels: ["std"], values: stds))
+
         let wholeRows = collectedMeasurements.filter{ $0.key.first == MetricNode.WHOLE_LABEL }.map{ (labels, measurements) in
             let row = MetricRow(labels: Array(labels.dropFirst()), values: measurements.values)
 
@@ -212,6 +245,9 @@ public struct MetricTree {
 
         // print(collectedMeasurements.values)
         // print(collectedMetrics)
+        // print(transposedMetrics)
+
+        // print(means, stds)
 
         return "\(header)\n\(rows)"
     }
