@@ -44,7 +44,7 @@ struct Measurement {
     let value: Double
 }
 
-public struct MetricTree: CustomStringConvertible {
+public struct MetricTree {
     enum DescriptionError: Error {
         case missingBothChildsAndMeasurements(atLabels: [String])
         case foundConflictingMeasurements(forLabels: [String])
@@ -146,7 +146,7 @@ public struct MetricTree: CustomStringConvertible {
         collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
     }
 
-    public var description: String {
+    public func describe(accuracy: Int = 5, valueWidth: Int = 16, labelWidth: Int = 32) -> String {
         var collectedMeasurements = OrderedDictionary<[String], [Measurement]>() // [[String]: [Measurement]]()
         var collectedMetrics = OrderedSet<Evaluator.Metric>()
 
@@ -191,27 +191,28 @@ public struct MetricTree: CustomStringConvertible {
             return row
         }
 
-        print(partRows)
-        print(wholeRows)
-        print(metricLabels)
+        // print(partRows)
+        // print(wholeRows)
+        // print(metricLabels)
 
-        print(String(repeating: " ", count: 32) + MetricHeader(labels: metricLabels, metrics: Array(collectedMetrics)).describe(width: 16))
+        // print(String(repeating: " ", count: labelWidth) + MetricHeader(labels: metricLabels, metrics: Array(collectedMetrics)).describe(width: valueWidth))
+        let header = String(repeating: " ", count: labelWidth) + MetricHeader(labels: metricLabels, metrics: Array(collectedMetrics)).describe(width: valueWidth)
 
         // print(partRows.first!.describe(accuracy: 5, valueWidth: 16, labelWidth: 32))
 
         var isFirstRow = true
-        partRows.forEach{ row in
+        let rows = partRows.map{ row in
             if isFirstRow {
-                print(row.describe(accuracy: 5, valueWidth: 16, labelWidth: 32, appending: wholeRows))
                 isFirstRow = false
+                return row.describe(accuracy: accuracy, valueWidth: valueWidth, labelWidth: labelWidth, appending: wholeRows)
             } else {
-                print(row.describe(accuracy: 5, valueWidth: 16, labelWidth: 32))
+                return row.describe(accuracy: accuracy, valueWidth: valueWidth, labelWidth: labelWidth)
             }
-        }
+        }.joined(separator: "\n")
 
         // print(collectedMeasurements.values)
         // print(collectedMetrics)
 
-        return "foo"
+        return "\(header)\n\(rows)"
     }
 }

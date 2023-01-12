@@ -102,7 +102,7 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
 
             task.waitUntilExit()
 
-            print("output: ")
+            // print("output: ")
             if let unwrappedOutputData = outputData {
                 let output = String(decoding: unwrappedOutputData, as: UTF8.self)
                 // print(unwrappedOutputData)

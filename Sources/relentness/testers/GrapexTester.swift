@@ -99,7 +99,7 @@ public struct GrapexTester {
                 )
             }
 
-            print(metrics)
+            logger.info("metrics:\n\(metrics.describe())")
 
             return metrics
         } catch let error {
