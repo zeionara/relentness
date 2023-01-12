@@ -1,4 +1,5 @@
 import Foundation
+import OrderedCollections
 
 public extension Array {
     func groupsWithExtension(nChunks: Int, nElementsPerChunk: Int, nRemainingElements: Int) -> [[Element]] {
@@ -165,5 +166,29 @@ public extension Array where Element == UInt8 {
         let data = Data(relevantBytes)
         
         return Int(UInt16(littleEndian: data.withUnsafeBytes{ $0.load(as: UInt16.self) }))
+    }
+}
+
+public extension Array {
+    func appending(_ element: Element) -> Array {
+        var result = self
+        result.append(element)
+        return result
+    }
+}
+
+public extension OrderedSet {
+    mutating func insert<S>(contentsOf newElements: S) where S: Sequence, Self.Element == S.Element {
+        newElements.forEach{ element in
+            append(element)
+        }
+    }
+}
+
+extension Array where Element == Measurement {
+    var values: [Double] {
+        self.map{ measurement in
+            measurement.value
+        }
     }
 }

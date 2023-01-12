@@ -1,4 +1,9 @@
+import OrderedCollections
+
 struct MetricNode {
+    public static let PART_LABEL = "part"
+    public static let WHOLE_LABEL = "whole"
+
     let label: String
     let tree: MetricTree
 
@@ -25,6 +30,13 @@ struct MetricNode {
 
         tree = try MetricTree(from: bytes, startingAt: &offset)
     }
+
+    func collectMeasurements(labels: [String], measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>, metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>) throws {
+        // print(label)
+        // print(metrics)
+        try tree.collectMeasurements(labels: labels.appending(label), measurements: &collectedMeasurements, metrics: &collectedMetrics)
+        // print(metrics)
+    }
 }
 
 struct Measurement {
@@ -32,7 +44,13 @@ struct Measurement {
     let value: Double
 }
 
-public struct MetricTree {
+public struct MetricTree: CustomStringConvertible {
+    enum DescriptionError: Error {
+        case missingBothChildsAndMeasurements(atLabels: [String])
+        case foundConflictingMeasurements(forLabels: [String])
+        case numberOfPartMetricsDoesNotMatch(forLabels: [String])
+    }
+
     var childs: [MetricNode]? = nil
     var measurements: [Measurement]? = nil
 
@@ -54,7 +72,7 @@ public struct MetricTree {
         // print(length)
 
         if length & 0x80 > 0 {
-            childs = [MetricNode]()
+            // childs = nil // [MetricNode]()
 
             let nMetrics = length & 0x7f
             var metricNameOffset = (offset + 8 * Int(nMetrics) + 1)
@@ -101,5 +119,99 @@ public struct MetricTree {
 
             // print(bytes[offset...])
         }
+    }
+
+    func collectMeasurements(labels: [String], measurements collectedMeasurements: inout OrderedDictionary<[String], [Measurement]>, metrics collectedMetrics: inout OrderedSet<Evaluator.Metric>) throws {
+        // print("childs?", childs)
+
+        if let childs = childs {
+            try childs.forEach{ node in
+                try node.collectMeasurements(labels: labels, measurements: &collectedMeasurements, metrics: &collectedMetrics)
+            }
+            return
+        }
+
+        // print("no childs")
+
+        guard let measurements = measurements else {
+            throw DescriptionError.missingBothChildsAndMeasurements(atLabels: labels)
+        }
+
+        if let _ = collectedMeasurements[labels] {
+            throw DescriptionError.foundConflictingMeasurements(forLabels: labels)
+        }
+
+        collectedMeasurements[labels] = measurements
+        // collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
+        collectedMetrics.insert(contentsOf: measurements.map{ $0.metric })
+    }
+
+    public var description: String {
+        var collectedMeasurements = OrderedDictionary<[String], [Measurement]>() // [[String]: [Measurement]]()
+        var collectedMetrics = OrderedSet<Evaluator.Metric>()
+
+        do {
+            try collectMeasurements(labels: [], measurements: &collectedMeasurements, metrics: &collectedMetrics)
+        } catch DescriptionError.missingBothChildsAndMeasurements(let labels) {
+            print("Missing both childs and measurements: \(labels)")
+        } catch DescriptionError.foundConflictingMeasurements(let labels) {
+            print("Found conflicting measurements: \(labels)")
+        } catch {
+            print("Unexpected error: \(error)")
+        }
+
+        var metricLabels = [[String]?]()
+        var partRowLength: Int? = nil
+
+        // Suppose that values in every partial entry are located in the same order which corresponds to the order of metrics in the $collectedMetrics
+        // The partial metrics are stored first
+        let partRows = try! collectedMeasurements.filter{ $0.key.first == MetricNode.PART_LABEL }.map{ (labels, measurements) in
+            let row = MetricRow(labels: Array(labels.dropFirst()), values: measurements.values)
+
+            if let partRowLength = partRowLength {
+                guard row.count == partRowLength else {
+                    throw DescriptionError.numberOfPartMetricsDoesNotMatch(forLabels: labels)
+                }
+            } else {
+                partRowLength = row.count
+                metricLabels = row.values.map{ _ in nil }
+            }
+
+            return row
+        }
+        let wholeRows = collectedMeasurements.filter{ $0.key.first == MetricNode.WHOLE_LABEL }.map{ (labels, measurements) in
+            let row = MetricRow(labels: Array(labels.dropFirst()), values: measurements.values)
+
+            let metricLabel = row.labels.count == 0 ? nil : labels
+            // let metricLabel = labels.count == 0 ? nil : labels
+
+            // Suppose that in this nested loop "whole" labels are obesrved in the same sequence as during the $collectedMetrics object construction
+            row.values.forEach{_ in metricLabels.append(metricLabel) }
+            
+            return row
+        }
+
+        print(partRows)
+        print(wholeRows)
+        print(metricLabels)
+
+        print(String(repeating: " ", count: 32) + MetricHeader(labels: metricLabels, metrics: Array(collectedMetrics)).describe(width: 16))
+
+        // print(partRows.first!.describe(accuracy: 5, valueWidth: 16, labelWidth: 32))
+
+        var isFirstRow = true
+        partRows.forEach{ row in
+            if isFirstRow {
+                print(row.describe(accuracy: 5, valueWidth: 16, labelWidth: 32, appending: wholeRows))
+                isFirstRow = false
+            } else {
+                print(row.describe(accuracy: 5, valueWidth: 16, labelWidth: 32))
+            }
+        }
+
+        // print(collectedMeasurements.values)
+        // print(collectedMetrics)
+
+        return "foo"
     }
 }

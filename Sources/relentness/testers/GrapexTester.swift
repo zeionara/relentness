@@ -87,14 +87,14 @@ public struct GrapexTester {
             } handleExecutionTimeMeasurement: { output, nSeconds -> MetricTree in
                 return MetricTree(
                     MetricNode(
+                        output,
+                        label: MetricNode.PART_LABEL
+                    ),
+                    MetricNode(
                         MetricTree(
                             Measurement(metric: .time, value: nSeconds)
                         ),
-                        label: "speed"
-                    ),
-                    MetricNode(
-                        output,
-                        label: "accuracy"
+                        label: MetricNode.WHOLE_LABEL
                     )
                 )
             }

@@ -6,11 +6,24 @@ enum CodingError: Error {
 }
 
 struct Evaluator: ConfigWithDefaultKeys {
-    enum Metric {
+    enum Metric: Hashable {
         case top(n: Int)
         case rank
         case reciprocalRank
         case time
+
+        var asColumnHeader: String {
+            switch self {
+                case .top(let n):
+                    return "top@\(n)"
+                case .rank:
+                    return "rank"
+                case .reciprocalRank:
+                    return "reciprocal-rank"
+                case .time:
+                    return "time"
+            }
+        }
     }
 
     enum Task {
