@@ -88,39 +88,41 @@ def test(
     # # mean = Foo().compute_mean(2.0, 5.0)
     # # print('foo')
 
-    config = Config(
-        MeagerAdapter(
-            '/usr/lib/libmeager_python.so',
-            CorpusConfig(
-                path = path,
-                enable_filter = False,
-                drop_filter_duplicates = True
-            ),
-            SamplerConfig(
-                pattern = Pattern.NONE,
-                n_observed_triples_per_pattern_instance = 1,
-                bern = bern,
-                cross_sampling = False,
-                n_workers = n_workers
-            ),
-            EvaluatorConfig(
-                task = EvaluationTask.LINK_PREDICTION
-            )
-        ),
-        ModelConfig(
-            model = Model(model),
-            hidden_size = hidden_size
-        ),
-        OptimizerConfig(
-            optimizer = Optimizer(optimizer),
-            alpha = alpha
-        ),
-        early_stopping_config = None,
-        checkpoint_config = CheckpointConfig(
-            root = input_to_output_model_path(path, model, seed) if output is None else output,
-            frequency = 10
-        )
-    )
+    config = Config.from_file(path)
+
+    # config = Config(
+    #     MeagerAdapter(
+    #         '/usr/lib/libmeager_python.so',
+    #         CorpusConfig(
+    #             path = path,
+    #             enable_filter = False,
+    #             drop_filter_duplicates = True
+    #         ),
+    #         SamplerConfig(
+    #             pattern = Pattern.NONE,
+    #             n_observed_triples_per_pattern_instance = 1,
+    #             bern = bern,
+    #             cross_sampling = False,
+    #             n_workers = n_workers
+    #         ),
+    #         EvaluatorConfig(
+    #             task = EvaluationTask.LINK_PREDICTION
+    #         )
+    #     ),
+    #     ModelConfig(
+    #         model = Model(model),
+    #         hidden_size = hidden_size
+    #     ),
+    #     OptimizerConfig(
+    #         optimizer = Optimizer(optimizer),
+    #         alpha = alpha
+    #     ),
+    #     early_stopping_config = None,
+    #     checkpoint_config = CheckpointConfig(
+    #         root = input_to_output_model_path(path, model, seed) if output is None else output,
+    #         frequency = 10
+    #     )
+    # )
 
     # config = Config(Task.LINK_PREDICTION)
     # config.set_corpus_path(path)
@@ -189,13 +191,6 @@ def test(
 
     # try:
     df = Trainer(config).train(
-        TrainConfig(
-            n_epochs,
-            batch_size,
-            entity_neg_rate,
-            relation_neg_rate,
-            margin
-        ),
         seed = seed,
         load = False,
         verbose = verbose
