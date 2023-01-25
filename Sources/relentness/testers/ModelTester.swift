@@ -33,43 +33,13 @@ public protocol ModelTester {
     init(model: ModelType, configRoot: URL, env: String, gpu: Bool, differentGpus: Bool, terminationDelay: Double?, nWorkers: Int?, logLevel: Logger.Level)
 
     func runSeedTest(config: Config, cvSplitIndex: Int, workerIndex: Int?, seed: Int?) async throws -> MetricTree  // low-level test
-    // public func runSingleTest(config: Config, workerIndex: Int?, seed: Int?) async throws -> MetricTree
 
     func runCvSplitTest(config: Config, cvSplitIndex: Int, seeds: [Int]?, delay: Double?) async throws -> [MetricTree]  // medium-level test
-    // public func runSingleTest(config: Config, seeds: [Int]?, delay: Double?) async throws -> [MetricTree]
 
     func run(config: Config, seeds: [Int]?, delay: Double?) async throws -> [[MetricTree]]  // high-level test
 }
 
 public extension ModelTester {
-    // init(
-    //     model: ModelType, configRoot: URL, env: String, gpu: Bool = true, differentGpus: Bool = true, terminationDelay: Double? = nil, nWorkers: Int? = nil, logLevel: Logger.Level = .info
-    // ) {
-    //     self.init(
-    //         model: model,
-    //         configRoot: configRoot,
-    //         env: env,
-    //         gpu: gpu,
-    //         differentGpus: differentGpus,
-    //         terminationDelay: terminationDelay,
-    //         nWorkers: nWorkers,
-    //         logger: Logger(level: logLevel, label: "grapex-tester")
-    //     )
-
-    //     logger = Logger(level: logLevel, label: "grapex-tester")
-
-    //     self.model = model
-
-    //     self.gpu = gpu
-    //     self.differentGpus = differentGpus
-
-    //     self.terminationDelay = terminationDelay
-
-    //     self.configRoot = configRoot
-    //     self.env = env
-
-    //     self.nWorkers = nWorkers
-    // }
 
     func runSeedTest(config: Config, cvSplitIndex: Int, workerIndex: Int? = nil, seed: Int? = nil) async throws -> MetricTree {
         let configPath = configRoot.appendingPathComponent(config.name.yaml)
@@ -77,12 +47,13 @@ public extension ModelTester {
 
         // Configure args
 
-        // var args = ["run", "main.exs", "\(configPath.path)", "-c"]
-        var args = initialArgs // ["run", "main.exs", "\(configPath.path)", "-c"]
+        var args = initialArgs
+
+        args.append(contentsOf: ["\(configPath.path)", "-c"])
 
         if let seed = seed {
             args.append(
-                contentsOf: ["\(configPath.path)", "-c", "-s", String(describing: seed)]
+                contentsOf: ["-s", String(describing: seed)]
             )
         }
 
@@ -92,26 +63,12 @@ public extension ModelTester {
 
         env["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-        // let envVars = ["TF_CPP_MIN_LOG_LEVEL": "3", "LC_ALL": "en_US.UTF-8"]
-
-        // if gpu {
-        //     args.append(
-        //         contentsOf: ["-c", "xla"]
-        //     )
-        //     if let unwrappedWorkerIndex = workerIndex, differentGpus {
-        //         envVars["CUDA_VISIBLE_DEVICES"] = String(describing: unwrappedWorkerIndex)
-        //     }
-        // }
-
         logger.debug("Running command '\(args.joined(separator: " "))'")
 
         do {
             let metrics = try await measureExecutionTime {
                 try await runSubprocessAndGetOutput(
-                    // path: "/home/\(USER)/\(env)/grapex",
-                    // path: URL(fileURLWithPath: "/home/\(USER)/\(env)"),
                     path: path,
-                    // executable: URL(fileURLWithPath: "/home/\(USER)/.asdf/shims/mix"),
                     executable: executable,
                     args: args,
                     env: env,
@@ -181,10 +138,7 @@ public extension ModelTester {
                 delay: delay
             )
 
-            // print(try seededMetrics.avg()?.describe())
-
             return seededMetrics
-            // return result
         }
     }
 }
