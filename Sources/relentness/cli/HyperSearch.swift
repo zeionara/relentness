@@ -96,7 +96,14 @@ public class HyperSearch: ParsableCommand {
 
         BlockingTask {
             // let sets = try! HyperParamSets(corpus_, model_.rawValue, path_)
-            let tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env, nWorkers: self.nWorkers, logLevel: logLevel)
+            let tester: any ModelTester
+
+            switch self.platform {
+                case .grapex:
+                    tester = try! GrapexTester(model: self.model.asGrapexModel, configRoot: configRoot, env: self.env, nWorkers: self.nWorkers, logLevel: logLevel)
+                case .openke:
+                    tester = try! OpenKeTester(model: self.model.asOpenKeModel, configRoot: configRoot, env: self.env, nWorkers: self.nWorkers, logLevel: logLevel)
+            }
 
             // for hparams in sets.storage.sets {
             for config in configs {

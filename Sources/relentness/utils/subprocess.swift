@@ -45,6 +45,10 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
     while true { // Repeat process execution until success (testing process can be killed with kill -9 $(ps -aux | grep "python -m relentness" | grep -v "grep" | cut -d " " -f7)
         let task = Process()
 
+        // print(path)
+        // print(executable)
+        // print(args)
+
         // task.executableURL = URL(fileURLWithPath: path)
         task.executableURL = executable
         task.currentDirectoryURL = path
@@ -100,6 +104,8 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
                 )
             }
             let outputData = try? outputPipe.fileHandleForReading.readToEnd()
+            // print("GOT OUT")
+            // print(outputData)
 
             task.waitUntilExit()
 
@@ -118,10 +124,12 @@ public func runSubprocessAndGetOutput(path: URL, executable: URL, args: [String]
                 // return dropNewLine ? String(output.dropLast()) : String(output)
             }
         } catch {
+            // print("CAUGHT")
             if retryOnError {
                 print("Error running subprocess, retrying...")
             } else {
                 print("Subprocess thrown an exception: \(String(describing: error)), exiting...")
+                throw error
                 // return String(describing: error)
             }
         }

@@ -234,21 +234,22 @@ public struct CompareModels: ParsableCommand {
                         let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [[OpenKeTester.Metrics]] in
                             switch model.platform {
                             case .openke:
-                                return try await OpenKeTester(
-                                    model: model.architecture.asOpenKeModel,
-                                    env: env_,
-                                    corpus: corpus_,
-                                    nWorkers: nWorkers_,
-                                    remove: remove_,
-                                    gpu: gpu_,
-                                    differentGpus: differentGpus_,
-                                    terminationDelay: terminationDelay_,
-                                    logger: logger
-                                ).run(
-                                    seeds: seeds_.count > 0 ? seeds_ : nil,
-                                    delay: delay_,
-                                    hparams: hparams
-                                )
+                                throw NotImplementedError.platformIsNotSupported(name: "openke")
+                                // return try await OpenKeTester(
+                                //     model: model.architecture.asOpenKeModel,
+                                //     env: env_,
+                                //     corpus: corpus_,
+                                //     nWorkers: nWorkers_,
+                                //     remove: remove_,
+                                //     gpu: gpu_,
+                                //     differentGpus: differentGpus_,
+                                //     terminationDelay: terminationDelay_,
+                                //     logger: logger
+                                // ).run(
+                                //     seeds: seeds_.count > 0 ? seeds_ : nil,
+                                //     delay: delay_,
+                                //     hparams: hparams
+                                // )
                             case .grapex:
                                 throw NotImplementedError.platformIsNotSupported(name: "grapex")
                                 // return try await GrapexTester(
@@ -367,22 +368,23 @@ public struct CompareModels: ParsableCommand {
                     let (metrics, executionTime) = try await traceExecutionTime(logger) { () -> [OpenKeTester.Metrics] in
                         switch model.platform {
                             case .openke:
-                                return try await OpenKeTester(
-                                    model: model.architecture.asOpenKeModel,
-                                    env: env_,
-                                    corpus: corpus_,
-                                    nWorkers: nWorkers_,
-                                    remove: remove_,
-                                    gpu: gpu_,
-                                    differentGpus: differentGpus_,
-                                    terminationDelay: terminationDelay_
-                                ).runSingleTest(
-                                   seeds: seeds_.count > 0 ? seeds_ : nil,
-                                   delay: delay_,
-                                   cvSplitIndex: 0,
-                                   hparams: modelHparams,
-                                   usingValidationSubset: true
-                                )
+                                throw NotImplementedError.platformIsNotSupported(name: "openke")
+                                // return try await OpenKeTester(
+                                //     model: model.architecture.asOpenKeModel,
+                                //     env: env_,
+                                //     corpus: corpus_,
+                                //     nWorkers: nWorkers_,
+                                //     remove: remove_,
+                                //     gpu: gpu_,
+                                //     differentGpus: differentGpus_,
+                                //     terminationDelay: terminationDelay_
+                                // ).runSingleTest(
+                                //    seeds: seeds_.count > 0 ? seeds_ : nil,
+                                //    delay: delay_,
+                                //    cvSplitIndex: 0,
+                                //    hparams: modelHparams,
+                                //    usingValidationSubset: true
+                                // )
                             case .grapex:
                                 throw NotImplementedError.platformIsNotSupported(name: "grapex")
                                 // return try await GrapexTester(

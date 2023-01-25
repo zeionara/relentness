@@ -34,7 +34,7 @@ public enum ModelConversionError: Error {
 public enum Model: String, CaseIterable, ExpressibleByArgument {
     case transe, complex, se
 
-    public var asOpenKeModel: OpenKeModel {
+    public var asOpenKeModel: OpenKeTester.ModelType {
         get throws {
             switch self {
             case .transe:
@@ -124,21 +124,22 @@ public struct Test: ParsableCommand {
 
             do { 
                 let (metrics, executionTime) = try await traceExecutionTime(logger) {
-                    try await OpenKeTester(
-                        model: model_.asOpenKeModel,
-                        env: env_,
-                        corpus: corpus_,
-                        remove: remove_,
-                        gpu: gpu_,
-                        differentGpus: differentGpus_
-                    ).runSingleTest(
-                        seed: seed_,
-                        cvSplitIndex: cvSplitIndex_
-                    )
+                    throw NotImplementedError.platformIsNotSupported(name: "openke")
+                    // try await OpenKeTester(
+                    //     model: model_.asOpenKeModel,
+                    //     env: env_,
+                    //     corpus: corpus_,
+                    //     remove: remove_,
+                    //     gpu: gpu_,
+                    //     differentGpus: differentGpus_
+                    // ).runSingleTest(
+                    //     seed: seed_,
+                    //     cvSplitIndex: cvSplitIndex_
+                    // )
                 }
 
                 print(MeagerMetricSeries.headerWithExecutionTime)
-                print(metrics.mean.mean.descriptionWithExecutionTime(executionTime))
+                // print(metrics.mean.mean.descriptionWithExecutionTime(executionTime))
                 // output = try await runSubprocessAndGetOutput(
                 //     path: "/home/zeio/anaconda3/envs/\(env_)/bin/python",
                 //     args: ["-m", "relentness", "test", "./Assets/Corpora/\(path_)/", "-s", "\(seed_)", "-m", model_.rawValue, "-t"],
@@ -262,23 +263,24 @@ public struct TestWithSeeds: ParsableCommand {
         BlockingTask {
             do { 
                 let (metrics, executionTime) = try await traceExecutionTime(logger) {
-                    try await OpenKeTester(
-                        model: model_.asOpenKeModel,
-                        env: env_,
-                        corpus: corpus_,
-                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
-                        remove: remove_,
-                        gpu: gpu_,
-                        differentGpus: differentGpus_
-                    ).runSingleTest(
-                        seeds: seeds_.count > 0 ? seeds_ : nil,
-                        cvSplitIndex: cvSplitIndex_
-                    )
+                    throw NotImplementedError.platformIsNotSupported(name: "openke")
+                    // try await OpenKeTester(
+                    //     model: model_.asOpenKeModel,
+                    //     env: env_,
+                    //     corpus: corpus_,
+                    //     nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                    //     remove: remove_,
+                    //     gpu: gpu_,
+                    //     differentGpus: differentGpus_
+                    // ).runSingleTest(
+                    //     seeds: seeds_.count > 0 ? seeds_ : nil,
+                    //     cvSplitIndex: cvSplitIndex_
+                    // )
                 }
 
                 // print(metrics.map{$0.mean.mean})
                 print(MeagerMetricSeries.headerWithExecutionTime)
-                print(metrics.mean.mean.mean.descriptionWithExecutionTime(executionTime)) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
+                // print(metrics.mean.mean.mean.descriptionWithExecutionTime(executionTime)) // The first is for different seeds, the second for different filters, the third is for different corruption strategies
             } catch {
                 print("Unexpected error \(error), cannot complete testing")
             }
@@ -335,22 +337,23 @@ public struct TestAllFolds: ParsableCommand {
         BlockingTask {
             do {
                 let (metrics, executionTime) = try await traceExecutionTime(logger) {
-                    try await OpenKeTester(
-                        model: model_.asOpenKeModel,
-                        env: env_,
-                        corpus: corpus_,
-                        nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
-                        remove: remove_,
-                        gpu: gpu_,
-                        differentGpus: differentGpus_
-                    ).run(
-                        seeds: seeds_.count > 0 ? seeds_ : nil
-                    )
+                    throw NotImplementedError.platformIsNotSupported(name: "openke")
+                    // try await OpenKeTester(
+                    //     model: model_.asOpenKeModel,
+                    //     env: env_,
+                    //     corpus: corpus_,
+                    //     nWorkers: nWorkers_, // > 0 ? nWorkers_ : nil
+                    //     remove: remove_,
+                    //     gpu: gpu_,
+                    //     differentGpus: differentGpus_
+                    // ).run(
+                    //     seeds: seeds_.count > 0 ? seeds_ : nil
+                    // )
                 }
 
                 print(MeagerMetricSeries.headerWithExecutionTime)
-                print(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime)) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
-                print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
+                // print(mean(sets: metrics).mean.mean.mean.descriptionWithExecutionTime(executionTime)) // Firstly average by cv-splits, then by seeds, then by filters and finally by corruption strategy
+                // print("Averaged \(metrics.count) x \(metrics.first!.count) x \(metrics.first!.first!.subsets.count) batches")
                 // for metricsForCvSplit in metrics {
                 //     for metricsForSeed in metricsForCvSplit {
                 //         print(metricsForSeed.mean.mean)
