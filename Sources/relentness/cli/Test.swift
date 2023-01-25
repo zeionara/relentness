@@ -47,7 +47,7 @@ public enum Model: String, CaseIterable, ExpressibleByArgument {
         }
     }
 
-    public var asGrapexModel: GrapexModel {
+    public var asGrapexModel: GrapexTester.ModelType {
         get throws {
             switch self {
                 case .transe:
