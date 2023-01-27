@@ -1,0 +1,46 @@
+corpus:
+  path: Demo
+  enable-filter: false
+  drop-pattern-duplicates: false
+  drop-filter-duplicates: true
+sampler:
+  pattern: null
+  n-observed-triples-per-pattern-instance: 1
+  bern: false
+  cross-sampling: false
+  n-workers: 8
+evaluator:
+  task: link-prediction
+  metrics:
+    - top:
+        n: 1
+    - top:
+        n: 3
+    - top:
+        n: 10
+    - top:
+        n: 100
+    - top:
+        n: 1000
+    - rank
+    - reciprocal-rank
+model:
+  model: transe
+  hidden-size:
+    - 10
+    - 20
+  reverse: false
+trainer:
+  n-epochs:
+    - 70
+    - 80
+  batch-size: 40
+  entity-negative-rate: 1
+  relation-negative-rate: 0
+  margin: 5.0
+optimizer:
+  optimizer: adamw
+  alpha: 0.001
+checkpoint:
+  root: assets/models/transe
+  frequency: null
